@@ -1,0 +1,190 @@
+// Furlong data model.
+// Invariant: all money stored as integer cents (BigInt). Never floats for money.
+// Pedigree is modeled via self-referential Horse relations (sire / dam).
+// Damsire is derived through dam.sire — not stored separately.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Sex {
+  COLT
+  FILLY
+  GELDING
+  MARE
+  STALLION
+}
+
+enum AuctionHouse {
+  KEENELAND
+  FASIG_TIPTON
+  TATTERSALLS
+  GOFFS
+  OBS
+  INGLIS
+}
+
+model Horse {
+  id          String   @id @default(cuid())
+  name        String?
+  sex         Sex?
+  color       String?
+  foalingYear Int?
+
+  // self-referential pedigree
+  sireId String?
+  sire   Horse?  @relation("Sire", fields: [sireId], references: [id])
+  damId  String?
+  dam    Horse?  @relation("Dam", fields: [damId], references: [id])
+
+  sireOf    Horse[]     @relation("Sire")
+  damOf     Horse[]     @relation("Dam")
+  hips      Hip[]
+  sireStats SireStats[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([name])
+  @@index([sireId])
+  @@index([damId])
+}
+
+model Consignor {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  hips      Hip[]
+  createdAt DateTime @default(now())
+}
+
+model Breeder {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  hips      Hip[]
+  createdAt DateTime @default(now())
+}
+
+model Sale {
+  id           String       @id @default(cuid())
+  auctionHouse AuctionHouse
+  name         String
+  year         Int
+  startDate    DateTime?
+  endDate      DateTime?
+  hips         Hip[]
+  createdAt    DateTime     @default(now())
+
+  @@unique([auctionHouse, name, year])
+}
+
+model Hip {
+  id            String  @id @default(cuid())
+  saleId        String
+  sale          Sale    @relation(fields: [saleId], references: [id])
+  hipNumber     Int
+  sessionNumber Int?
+
+  horseId String
+  horse   Horse  @relation(fields: [horseId], references: [id])
+
+  consignorId String?
+  consignor   Consignor? @relation(fields: [consignorId], references: [id])
+  breederId   String?
+  breeder     Breeder?   @relation(fields: [breederId], references: [id])
+
+  result     SaleResult?
+  valuations Valuation[]
+
+  createdAt DateTime @default(now())
+
+  @@unique([saleId, hipNumber])
+  @@index([horseId])
+}
+
+model SaleResult {
+  id         String    @id @default(cuid())
+  hipId      String    @unique
+  hip        Hip       @relation(fields: [hipId], references: [id])
+  priceCents BigInt? // null when RNA / not sold
+  rna        Boolean   @default(false)
+  buyer      String?
+  soldAt     DateTime?
+  createdAt  DateTime  @default(now())
+}
+
+model Valuation {
+  id                 String   @id @default(cuid())
+  hipId              String
+  hip                Hip      @relation(fields: [hipId], references: [id])
+  estValueLowCents   BigInt
+  estValueHighCents  BigInt
+  predPriceLowCents  BigInt
+  predPriceHighCents BigInt
+  confidence         Float // 0..1
+  hiddenGemScore     Float? // (est value mid) - (pred price mid), normalized
+  modelVersion       String
+  summary            String? // plain-English rationale
+  features           Json?
+  createdAt          DateTime @default(now())
+
+  @@index([hipId])
+  @@index([modelVersion])
+}
+
+model SireStats {
+  id                 String   @id @default(cuid())
+  sireId             String
+  sire               Horse    @relation(fields: [sireId], references: [id])
+  year               Int
+  avgYearlingCents   BigInt?
+  earningsPerStarter BigInt?
+  stakesWinnerPct    Float?
+  studFeeCents       BigInt?
+  createdAt          DateTime @default(now())
+
+  @@unique([sireId, year])
+}
+
+model User {
+  id         String         @id @default(cuid())
+  email      String         @unique
+  createdAt  DateTime       @default(now())
+  profiles   BuyerProfile[]
+  shortlists Shortlist[]
+}
+
+model BuyerProfile {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id])
+  budgetLowCents  BigInt?
+  budgetHighCents BigInt?
+  preferredSires  String[]
+  notes           String?
+  createdAt       DateTime @default(now())
+}
+
+model Shortlist {
+  id        String          @id @default(cuid())
+  userId    String
+  user      User            @relation(fields: [userId], references: [id])
+  name      String
+  items     ShortlistItem[]
+  createdAt DateTime        @default(now())
+}
+
+model ShortlistItem {
+  id          String    @id @default(cuid())
+  shortlistId String
+  shortlist   Shortlist @relation(fields: [shortlistId], references: [id])
+  hipId       String
+  note        String?
+  createdAt   DateTime  @default(now())
+
+  @@unique([shortlistId, hipId])
+}

@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: furlong
+      POSTGRES_PASSWORD: furlong
+      POSTGRES_DB: furlong
+    ports:
+      - "5432:5432"
+    volumes:
+      - furlong_pg:/var/lib/postgresql/data
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - furlong_redis:/data
+volumes:
+  furlong_pg:
+  furlong_redis:

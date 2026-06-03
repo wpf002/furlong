@@ -1,0 +1,10 @@
+{
+  "extends": "../../packages/config/tsconfig.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "composite": false
+  },
+  "include": ["src/**/*.ts"]
+}

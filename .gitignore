@@ -1,0 +1,27 @@
+# deps
+node_modules/
+.pnpm-store/
+# build
+dist/
+.next/
+.turbo/
+*.tsbuildinfo
+# env
+.env
+.env.*
+!.env.example
+# python
+services/ml/.venv/
+__pycache__/
+*.pyc
+services/ml/models/*.pkl
+services/ml/models/*.txt
+# data (raw catalogs/results are large + may be licensed — keep out of git)
+data/catalogs/*
+data/results/*
+!data/catalogs/.gitkeep
+!data/results/.gitkeep
+# os / editor
+.DS_Store
+.vscode/*
+!.vscode/extensions.json
