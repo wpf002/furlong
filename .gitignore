@@ -25,3 +25,7 @@ data/results/*
 .DS_Store
 .vscode/*
 !.vscode/extensions.json
+# next.js generated
+next-env.d.ts
+# claude (keep shared launch config, ignore personal local settings)
+.claude/settings.local.json

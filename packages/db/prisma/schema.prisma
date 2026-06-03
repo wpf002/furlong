@@ -9,7 +9,8 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // Connection URL lives in prisma.config.ts (Prisma 7); the runtime client
+  // connects via the @prisma/adapter-pg driver adapter.
 }
 
 enum Sex {
@@ -30,11 +31,12 @@ enum AuctionHouse {
 }
 
 model Horse {
-  id          String   @id @default(cuid())
-  name        String?
-  sex         Sex?
-  color       String?
-  foalingYear Int?
+  id             String  @id @default(cuid())
+  name           String?
+  normalizedName String? // entity-resolution match key (see normalizeEntityName)
+  sex            Sex?
+  color          String?
+  foalingYear    Int?
 
   // self-referential pedigree
   sireId String?
@@ -51,22 +53,25 @@ model Horse {
   updatedAt DateTime @updatedAt
 
   @@index([name])
+  @@index([normalizedName])
   @@index([sireId])
   @@index([damId])
 }
 
 model Consignor {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  hips      Hip[]
-  createdAt DateTime @default(now())
+  id             String   @id @default(cuid())
+  name           String   @unique
+  normalizedName String   @unique // entity-resolution match key
+  hips           Hip[]
+  createdAt      DateTime @default(now())
 }
 
 model Breeder {
-  id        String   @id @default(cuid())
-  name      String   @unique
-  hips      Hip[]
-  createdAt DateTime @default(now())
+  id             String   @id @default(cuid())
+  name           String   @unique
+  normalizedName String   @unique // entity-resolution match key
+  hips           Hip[]
+  createdAt      DateTime @default(now())
 }
 
 model Sale {
@@ -127,6 +132,7 @@ model Valuation {
   predPriceHighCents BigInt
   confidence         Float // 0..1
   hiddenGemScore     Float? // (est value mid) - (pred price mid), normalized
+  limitedComparables Boolean  @default(false) // thin-data flag; UI never fakes precision
   modelVersion       String
   summary            String? // plain-English rationale
   features           Json?

@@ -1,0 +1,126 @@
+import type { SearchQuery } from '@furlong/shared';
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+
+// ---------------------------------------------------------------------------
+// Wire types. All money fields are plain integer cents (numbers), per the API
+// contract. Render exclusively via formatCents from @furlong/shared.
+// ---------------------------------------------------------------------------
+
+export type Sex = 'COLT' | 'FILLY' | 'GELDING' | 'MARE' | 'STALLION';
+
+export interface Sale {
+  id: string;
+  auctionHouse: string;
+  name: string;
+  year: number;
+  startDate: string | null;
+  endDate: string | null;
+}
+
+export interface Valuation {
+  estValueLowCents: number;
+  estValueHighCents: number;
+  predPriceLowCents: number;
+  predPriceHighCents: number;
+  confidence: number; // 0..1
+  hiddenGemScore: number | null;
+  limitedComparables: boolean;
+}
+
+export interface SearchHipHorse {
+  name: string | null;
+  sex: Sex | null;
+  color: string | null;
+  sireName: string | null;
+  damName: string | null;
+  damsireName: string | null;
+}
+
+export interface SearchHip {
+  id: string;
+  hipNumber: number;
+  sessionNumber: number | null;
+  horse: SearchHipHorse;
+  consignorName: string | null;
+  valuation: Valuation | null;
+  oneLiner: string;
+}
+
+export interface SearchResponse {
+  count: number;
+  hips: SearchHip[];
+}
+
+// Shape returned by GET /sales/:id/hips — richer than the search payload.
+export interface DetailHip {
+  id: string;
+  hipNumber: number;
+  sessionNumber: number | null;
+  horse: {
+    name: string | null;
+    sex: Sex | null;
+    color: string | null;
+    foalingYear?: number | null;
+    breederName?: string | null;
+    sire?: { name: string | null } | null;
+    dam?: { name: string | null; sire?: { name: string | null } | null } | null;
+  };
+  consignor?: { name: string | null } | null;
+  result?: {
+    priceCents?: number | null;
+    status?: string | null;
+  } | null;
+  valuations: Valuation[];
+}
+
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  let res: Response;
+  try {
+    res = await fetch(`${API_BASE}${path}`, {
+      ...init,
+      headers: {
+        'Content-Type': 'application/json',
+        ...(init?.headers ?? {}),
+      },
+      cache: 'no-store',
+    });
+  } catch (err) {
+    throw new Error(
+      `Could not reach the Furlong API at ${API_BASE}. Is the API running? (${
+        err instanceof Error ? err.message : String(err)
+      })`,
+    );
+  }
+
+  if (!res.ok) {
+    let detail = '';
+    try {
+      detail = await res.text();
+    } catch {
+      /* ignore */
+    }
+    throw new Error(
+      `API ${init?.method ?? 'GET'} ${path} failed: ${res.status} ${res.statusText}${
+        detail ? ` — ${detail.slice(0, 300)}` : ''
+      }`,
+    );
+  }
+
+  return (await res.json()) as T;
+}
+
+export function getSales(): Promise<Sale[]> {
+  return request<Sale[]>('/sales');
+}
+
+export function search(query: SearchQuery): Promise<SearchResponse> {
+  return request<SearchResponse>('/search', {
+    method: 'POST',
+    body: JSON.stringify(query),
+  });
+}
+
+export function getSaleHips(saleId: string): Promise<DetailHip[]> {
+  return request<DetailHip[]>(`/sales/${encodeURIComponent(saleId)}/hips`);
+}

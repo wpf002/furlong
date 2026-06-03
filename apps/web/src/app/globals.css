@@ -1,3 +1,44 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+
+  body {
+    /* Subtle paper grain via layered radial gradients on the cream base. */
+    background-color: theme('colors.paper.100');
+    background-image:
+      radial-gradient(
+        circle at 20% 0%,
+        rgba(176, 134, 66, 0.05),
+        transparent 45%
+      ),
+      radial-gradient(
+        circle at 100% 100%,
+        rgba(15, 61, 46, 0.04),
+        transparent 40%
+      );
+    background-attachment: fixed;
+  }
+
+  /* Numerals look best tabular for prices / hip numbers. */
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+@layer components {
+  /* A thin brass divider used as an editorial rule. */
+  .rule-brass {
+    height: 1px;
+    background: linear-gradient(
+      to right,
+      transparent,
+      theme('colors.brass.400'),
+      transparent
+    );
+  }
+}

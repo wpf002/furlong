@@ -10,7 +10,7 @@ from fastapi import FastAPI, UploadFile, File
 from pydantic import BaseModel
 
 from app.parsing.keeneland import parse_keeneland_catalog
-from app.valuation.model import predict, MODEL_VERSION
+from app.valuation.model import predict, reload_comparables, MODEL_VERSION
 
 app = FastAPI(title="furlong-ml")
 
@@ -34,3 +34,9 @@ class FeatureRequest(BaseModel):
 @app.post("/value")
 def value(req: FeatureRequest) -> dict:
     return predict(req.features)
+
+
+@app.post("/reload-comparables")
+def reload_comps() -> dict:
+    comps = reload_comparables()
+    return {"comparables": len(comps)}
