@@ -95,6 +95,9 @@ def build_catalog(name: str, year: int, horses: list[dict]) -> dict:
     hips = []
     for h in horses:
         nm = (h.get("name") or "").strip() or None
+        # FT labels unnamed yearlings "YYYY-<dam>"; treat those as unnamed.
+        if nm and re.match(r"^(19|20)\d\d[\s-]", nm):
+            nm = None
         hips.append({
             "hipNumber": int(h["hip"]),
             "sessionNumber": h.get("session") if isinstance(h.get("session"), int) else None,
@@ -127,10 +130,11 @@ def build_results_csv(horses: list[dict]) -> str:
         except ValueError:
             price = 0.0
         buyer = (h.get("purchaser") or "").strip().replace(",", " ")
+        # Only emit SOLD results. A price of 0 is ambiguous (RNA vs not-yet-sold
+        # for an upcoming sale) — skip it so upcoming catalogs stay result-free
+        # and show model predictions, not "RNA".
         if price > 0:
             out.write(f"{h.get('hip')},{int(round(price * 100))},false,{buyer}\n")
-        else:
-            out.write(f"{h.get('hip')},,true,\n")
     return out.getvalue()
 
 
