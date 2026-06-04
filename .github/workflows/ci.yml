@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Cancel superseded runs on the same ref.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  node:
+    name: Node (typecheck · migrations · tests · build)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: furlong
+          POSTGRES_PASSWORD: furlong
+          POSTGRES_DB: furlong
+        ports: ['5432:5432']
+        options: >-
+          --health-cmd "pg_isready -U furlong"
+          --health-interval 10s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://furlong:furlong@localhost:5432/furlong?schema=public
+      AUTH_SECRET: ci-test-secret
+      NEXT_PUBLIC_API_URL: http://localhost:4100
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Generate Prisma client
+        run: pnpm --filter @furlong/db exec prisma generate
+
+      - name: Apply migrations
+        run: pnpm --filter @furlong/db exec prisma migrate deploy
+
+      - name: Check schema is in sync with migrations (no drift)
+        run: pnpm --filter @furlong/db exec prisma migrate diff --from-config-datasource --to-schema prisma/schema.prisma --exit-code
+
+      - name: Typecheck (all packages)
+        run: pnpm -r typecheck
+
+      - name: API unit tests (vitest, against Postgres)
+        run: pnpm --filter @furlong/api exec vitest run
+
+      - name: Web build
+        run: pnpm --filter @furlong/web build
+
+  python:
+    name: Python ML (pytest)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: services/ml
+    env:
+      PYTHONPATH: .
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: services/ml/requirements.txt
+
+      - run: pip install -r requirements.txt
+
+      - name: ML unit tests (parser + valuation)
+        run: pytest -q
