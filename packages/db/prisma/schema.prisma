@@ -162,6 +162,27 @@ model User {
   createdAt  DateTime       @default(now())
   profiles   BuyerProfile[]
   shortlists Shortlist[]
+  alerts     Alert[]
+}
+
+enum AlertType {
+  CATALOG_DROP
+  CRITERIA_MATCH
+  SALE_SOON
+}
+
+model Alert {
+  id        String    @id @default(cuid())
+  userId    String
+  user      User      @relation(fields: [userId], references: [id])
+  type      AlertType
+  saleId    String? // soft link to a Sale (no FK; sales may predate the alert)
+  title     String
+  body      String?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([userId, createdAt])
 }
 
 model BuyerProfile {

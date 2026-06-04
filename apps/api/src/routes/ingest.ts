@@ -4,6 +4,7 @@ import { prisma } from '@furlong/db';
 import { ParseCatalogResponseSchema, numberToCents } from '@furlong/shared';
 import { ingestCatalog } from '../ingest/ingestCatalog.js';
 import { parseCsv } from '../ingest/csv.js';
+import { createCatalogDropAlerts } from '../alerts.js';
 
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL ?? 'http://localhost:8000';
 
@@ -106,6 +107,7 @@ export async function registerIngestRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: parsed.error.flatten() });
     }
     const { saleId, created, updated } = await ingestCatalog(parsed.data);
+    const alerts = await createCatalogDropAlerts(saleId);
     return {
       saleId,
       created,
@@ -113,6 +115,7 @@ export async function registerIngestRoutes(app: FastifyInstance) {
       parseRate: parsed.data.report.parseRate,
       hipsParsed: parsed.data.report.hipsParsed,
       hipsSkipped: parsed.data.report.hipsSkipped,
+      alertsCreated: alerts,
     };
   });
 

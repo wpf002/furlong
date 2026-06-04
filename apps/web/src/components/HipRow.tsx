@@ -2,6 +2,7 @@ import Link from 'next/link';
 import type { SearchHip } from '../lib/api';
 import { sexColorLabel } from '../lib/format';
 import { ValuationBands } from './ValuationBands';
+import { SaveToShortlist } from './SaveToShortlist';
 
 export function HipRow({ hip, saleId }: { hip: SearchHip; saleId: string }) {
   const { horse } = hip;
@@ -12,21 +13,29 @@ export function HipRow({ hip, saleId }: { hip: SearchHip; saleId: string }) {
     hip.valuation?.hiddenGemScore != null && hip.valuation.hiddenGemScore > 0;
 
   return (
-    <Link
-      href={`/hips/${hip.id}?sale=${encodeURIComponent(saleId)}`}
-      className={`group relative block overflow-hidden rounded-2xl border bg-paper-50 shadow-card transition duration-200 hover:-translate-y-0.5 hover:shadow-cardHover ${
+    <div
+      className={`group relative overflow-hidden rounded-2xl border bg-paper-50 shadow-card transition duration-200 hover:-translate-y-0.5 hover:shadow-cardHover ${
         isGem
           ? 'border-brass-400/60 ring-1 ring-brass-400/30'
           : 'border-ink/10 hover:border-ink/20'
       }`}
     >
       {isGem && (
-        <span className="absolute right-0 top-0 rounded-bl-xl bg-gradient-to-r from-brass-400 to-brass-600 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-white shadow-sm">
+        <span className="pointer-events-none absolute right-0 top-0 rounded-bl-xl bg-gradient-to-r from-brass-400 to-brass-600 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-white shadow-sm">
           ★ Hidden Gem
         </span>
       )}
 
-      <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-stretch">
+      {/* Save control sits outside the Link so clicks don't navigate. */}
+      <div className={`absolute right-3 z-10 ${isGem ? 'top-10' : 'top-3'}`}>
+        <SaveToShortlist hipId={hip.id} />
+      </div>
+
+      <Link
+        href={`/hips/${hip.id}?sale=${encodeURIComponent(saleId)}`}
+        className="block"
+      >
+        <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-stretch">
         {/* Hip numeral block */}
         <div className="flex shrink-0 items-start gap-4 sm:flex-col sm:items-center sm:justify-start sm:border-r sm:border-ink/10 sm:pr-5">
           <div className="flex flex-col items-center">
@@ -75,11 +84,12 @@ export function HipRow({ hip, saleId }: { hip: SearchHip; saleId: string }) {
           )}
         </div>
 
-        {/* Valuation */}
-        <div className="w-full shrink-0 sm:w-72 sm:border-l sm:border-ink/10 sm:pl-5">
-          <ValuationBands valuation={hip.valuation} showDisclaimer={false} compact />
+          {/* Valuation */}
+          <div className="w-full shrink-0 sm:w-72 sm:border-l sm:border-ink/10 sm:pl-5">
+            <ValuationBands valuation={hip.valuation} showDisclaimer={false} compact />
+          </div>
         </div>
-      </div>
-    </Link>
+      </Link>
+    </div>
   );
 }

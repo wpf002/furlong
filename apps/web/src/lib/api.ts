@@ -142,3 +142,88 @@ export interface ModelMetrics {
 export function getModelMetrics(): Promise<ModelMetrics> {
   return request<ModelMetrics>('/model/metrics');
 }
+
+// ---------------------------------------------------------------------------
+// Buyer layer (Phase 3). All /me/* endpoints require the x-user-id header,
+// injected client-side via useUser().userFetch — see src/lib/useUser.ts.
+// Money fields remain integer cents; budgets are entered in dollars in the UI
+// and converted before sending.
+// ---------------------------------------------------------------------------
+
+export interface AuthUser {
+  id: string;
+  email: string;
+}
+
+export interface BuyerProfile {
+  id: string;
+  budgetLowCents: number | null;
+  budgetHighCents: number | null;
+  preferredSires: string[];
+  notes: string | null;
+}
+
+export interface SuggestionsResponse {
+  count: number;
+  hips: SearchHip[];
+  hasProfile: boolean;
+}
+
+export interface ShortlistSummary {
+  id: string;
+  name: string;
+  itemCount: number;
+  createdAt: string;
+}
+
+export interface ShortlistItemHip {
+  id: string;
+  hipNumber: number;
+  saleId: string | null;
+  saleName: string | null;
+  saleYear: number | null;
+  sireName: string | null;
+  damName: string | null;
+  sex: Sex | null;
+  consignorName: string | null;
+  valuation: Valuation | null;
+}
+
+export interface ShortlistItem {
+  hipId: string;
+  note: string | null;
+  hip: ShortlistItemHip;
+}
+
+export interface ShortlistDetail {
+  id: string;
+  name: string;
+  items: ShortlistItem[];
+}
+
+export type AlertType = 'CATALOG_DROP' | 'CRITERIA_MATCH' | 'SALE_SOON';
+
+export interface BuyerAlert {
+  id: string;
+  type: AlertType;
+  saleId: string | null;
+  title: string;
+  body: string | null;
+  readAt: string | null;
+  createdAt: string;
+}
+
+export interface CalendarSale {
+  id: string;
+  auctionHouse: string;
+  name: string;
+  year: number;
+  startDate: string | null;
+  hipCount: number;
+  upcoming: boolean;
+}
+
+// The calendar is public (no auth header needed), so it reuses request().
+export function getCalendar(): Promise<CalendarSale[]> {
+  return request<CalendarSale[]>('/calendar');
+}

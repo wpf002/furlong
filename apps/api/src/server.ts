@@ -7,6 +7,8 @@ import { registerSaleRoutes } from './routes/sales.js';
 import { registerSearchRoutes } from './routes/search.js';
 import { registerIngestRoutes } from './routes/ingest.js';
 import { registerModelRoutes } from './routes/model.js';
+import { registerAuthRoutes } from './auth.js';
+import { registerBuyerRoutes } from './routes/buyer.js';
 
 // 25MB body limit: a full Keeneland September year is several thousand hips of
 // catalog JSON in one /ingest/catalog-json call.
@@ -24,6 +26,8 @@ await registerSaleRoutes(app);
 await registerSearchRoutes(app);
 await registerIngestRoutes(app);
 await registerModelRoutes(app);
+await registerAuthRoutes(app);
+await registerBuyerRoutes(app);
 
 const port = Number(process.env.API_PORT ?? 4000);
 app.listen({ port, host: '0.0.0.0' }).catch((err) => {

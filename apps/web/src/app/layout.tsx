@@ -1,6 +1,8 @@
 import './globals.css';
 import type { ReactNode } from 'react';
 import { Fraunces, Inter } from 'next/font/google';
+import { UserProvider } from '../lib/useUser';
+import { TopNav } from '../components/TopNav';
 
 const display = Fraunces({
   subsets: ['latin'],
@@ -25,7 +27,12 @@ export const metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={`${display.variable} ${body.variable}`}>
-      <body className="bg-paper-100 font-sans text-ink antialiased">{children}</body>
+      <body className="bg-paper-100 font-sans text-ink antialiased">
+        <UserProvider>
+          <TopNav />
+          {children}
+        </UserProvider>
+      </body>
     </html>
   );
 }

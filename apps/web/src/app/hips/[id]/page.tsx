@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { getSaleHips, type DetailHip, type Valuation } from '../../../lib/api';
 import { sexColorLabel, VALUATION_DISCLAIMER } from '../../../lib/format';
 import { ValuationBands } from '../../../components/ValuationBands';
+import { SaveToShortlist } from '../../../components/SaveToShortlist';
 import { formatCents } from '@furlong/shared';
 
 export const dynamic = 'force-dynamic';
@@ -92,7 +93,10 @@ export default async function HipDetailPage({
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
-      {backLink}
+      <div className="flex items-center justify-between gap-3">
+        {backLink}
+        <SaveToShortlist hipId={hip.id} variant="button" />
+      </div>
 
       <header className="mt-5">
         <div className="flex items-center gap-3">

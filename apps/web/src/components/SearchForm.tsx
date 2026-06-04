@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { SearchQuery } from '@furlong/shared';
 import type { Sale } from '../lib/api';
 import { dollarsToCents, parseSires } from '../lib/format';
@@ -20,10 +20,12 @@ export function SearchForm({
   sales,
   onSubmit,
   loading,
+  onSaleChange,
 }: {
   sales: Sale[];
   onSubmit: (s: SearchSubmit) => void;
   loading: boolean;
+  onSaleChange?: (saleId: string) => void;
 }) {
   const [saleId, setSaleId] = useState(sales[0]?.id ?? '');
   const [budgetLow, setBudgetLow] = useState('');
@@ -31,6 +33,12 @@ export function SearchForm({
   const [sires, setSires] = useState('');
   const [hiddenGemsOnly, setHiddenGemsOnly] = useState(false);
   const [quickBudget, setQuickBudget] = useState('');
+
+  // Report the selected sale upward (initial + on change) so the parent can
+  // offer "Show my matches" for the currently-chosen sale before a search.
+  useEffect(() => {
+    onSaleChange?.(saleId);
+  }, [saleId, onSaleChange]);
 
   function buildQuery(overrideHigh?: number): SearchQuery {
     const q: SearchQuery = { saleId };

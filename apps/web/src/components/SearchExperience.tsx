@@ -1,11 +1,12 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import type { Sale, SearchHip } from '../lib/api';
 import { search } from '../lib/api';
 import { VALUATION_DISCLAIMER } from '../lib/format';
 import { SearchForm, type SearchSubmit, type SortMode } from './SearchForm';
 import { HipRow } from './HipRow';
+import { MyMatches } from './MyMatches';
 
 // Sort by the midpoint of the predicted price band (cheapest first) for the
 // "best value" quick action. Unvalued hips sink to the bottom.
@@ -25,6 +26,7 @@ export function SearchExperience({
   const [hips, setHips] = useState<SearchHip[] | null>(null);
   const [count, setCount] = useState(0);
   const [activeSaleId, setActiveSaleId] = useState('');
+  const [selectedSaleId, setSelectedSaleId] = useState(sales[0]?.id ?? '');
   const [sort, setSort] = useState<SortMode>('rank');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -50,6 +52,8 @@ export function SearchExperience({
       setLoading(false);
     }
   }
+
+  const handleSaleChange = useCallback((id: string) => setSelectedSaleId(id), []);
 
   const visible = useMemo(() => {
     if (!hips) return [];
@@ -98,9 +102,16 @@ export function SearchExperience({
         </div>
       )}
 
-      <SearchForm sales={sales} onSubmit={handleSubmit} loading={loading} />
+      <SearchForm
+        sales={sales}
+        onSubmit={handleSubmit}
+        loading={loading}
+        onSaleChange={handleSaleChange}
+      />
 
       <p className="text-xs italic text-ink-500">{VALUATION_DISCLAIMER}</p>
+
+      {sales.length > 0 && <MyMatches saleId={selectedSaleId} sales={sales} />}
 
       {error && (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
