@@ -4,7 +4,15 @@ import { sexColorLabel } from '../lib/format';
 import { ValuationBands } from './ValuationBands';
 import { SaveToShortlist } from './SaveToShortlist';
 
-export function HipRow({ hip, saleId }: { hip: SearchHip; saleId: string }) {
+export function HipRow({
+  hip,
+  saleId,
+  currency = 'USD',
+}: {
+  hip: SearchHip;
+  saleId: string;
+  currency?: string;
+}) {
   const { horse } = hip;
   const sire = horse.sireName ?? 'Unknown sire';
   const dam = horse.damName ?? 'Unknown dam';
@@ -86,7 +94,12 @@ export function HipRow({ hip, saleId }: { hip: SearchHip; saleId: string }) {
 
           {/* Valuation */}
           <div className="w-full shrink-0 sm:w-72 sm:border-l sm:border-ink/10 sm:pl-5">
-            <ValuationBands valuation={hip.valuation} showDisclaimer={false} compact />
+            <ValuationBands
+              valuation={hip.valuation}
+              showDisclaimer={false}
+              compact
+              currency={currency}
+            />
           </div>
         </div>
       </Link>

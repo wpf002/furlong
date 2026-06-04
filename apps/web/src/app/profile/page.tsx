@@ -5,6 +5,7 @@ import { formatCents } from '@furlong/shared';
 import type { BuyerProfile } from '../../lib/api';
 import { dollarsToCents, parseSires } from '../../lib/format';
 import { isNotSignedIn, useUser } from '../../lib/useUser';
+import { NotificationSettings } from '../../components/NotificationSettings';
 
 const FIELD =
   'mt-1.5 w-full rounded-lg border border-ink/15 bg-paper-50 px-3 py-2.5 text-sm text-ink-900 shadow-sm transition placeholder:text-ink-500/60 focus:border-racing-600 focus:outline-none focus:ring-2 focus:ring-racing-600/15';
@@ -203,6 +204,8 @@ export default function ProfilePage() {
           </div>
         </form>
       )}
+
+      <NotificationSettings />
     </main>
   );
 }

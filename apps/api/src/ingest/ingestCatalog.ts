@@ -15,7 +15,21 @@ export interface IngestResult {
  * Entity resolution order per hip: damsire -> dam (with sireId = damsire) ->
  * sire -> consignor -> breeder, then upsert the Hip on [saleId, hipNumber].
  */
-export async function ingestCatalog(parsed: ParseCatalogResponse): Promise<IngestResult> {
+type SaleCategory = 'YEARLING' | 'BREEDING_STOCK' | 'TWO_YEAR_OLD' | 'WEANLING' | 'MIXED' | 'OTHER';
+
+export interface IngestOptions {
+  category?: SaleCategory;
+  currency?: string; // ISO 4217; money is stored in minor units of this
+}
+
+export async function ingestCatalog(
+  parsed: ParseCatalogResponse,
+  opts: IngestOptions = {},
+): Promise<IngestResult> {
+  const saleAttrs = {
+    ...(opts.category ? { category: opts.category } : {}),
+    ...(opts.currency ? { currency: opts.currency } : {}),
+  };
   const sale = await prisma.sale.upsert({
     where: {
       auctionHouse_name_year: {
@@ -24,11 +38,12 @@ export async function ingestCatalog(parsed: ParseCatalogResponse): Promise<Inges
         year: parsed.year,
       },
     },
-    update: {},
+    update: saleAttrs,
     create: {
       auctionHouse: parsed.auctionHouse,
       name: parsed.saleName,
       year: parsed.year,
+      ...saleAttrs,
     },
     select: { id: true },
   });

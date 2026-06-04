@@ -74,6 +74,15 @@ model Breeder {
   createdAt      DateTime @default(now())
 }
 
+enum SaleCategory {
+  YEARLING
+  BREEDING_STOCK
+  TWO_YEAR_OLD
+  WEANLING
+  MIXED
+  OTHER
+}
+
 model Sale {
   id           String       @id @default(cuid())
   auctionHouse AuctionHouse
@@ -81,6 +90,8 @@ model Sale {
   year         Int
   startDate    DateTime?
   endDate      DateTime?
+  currency     String       @default("USD") // ISO 4217; money stored in minor units of this
+  category     SaleCategory @default(YEARLING)
   hips         Hip[]
   createdAt    DateTime     @default(now())
 
@@ -157,12 +168,15 @@ model SireStats {
 }
 
 model User {
-  id         String         @id @default(cuid())
-  email      String         @unique
-  createdAt  DateTime       @default(now())
-  profiles   BuyerProfile[]
-  shortlists Shortlist[]
-  alerts     Alert[]
+  id          String         @id @default(cuid())
+  email       String         @unique
+  phone       String? // E.164 for SMS alerts
+  notifyEmail Boolean        @default(true)
+  notifySms   Boolean        @default(false)
+  createdAt   DateTime       @default(now())
+  profiles    BuyerProfile[]
+  shortlists  Shortlist[]
+  alerts      Alert[]
 }
 
 enum AlertType {

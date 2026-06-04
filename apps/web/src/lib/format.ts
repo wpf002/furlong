@@ -1,4 +1,4 @@
-import type { Sex } from './api';
+import type { SaleCategory, Sex } from './api';
 
 // Single source of truth for the Phase 1 valuation disclaimer.
 export const VALUATION_DISCLAIMER =
@@ -27,6 +27,38 @@ export function parseSires(input: string): string[] {
 export function sexColorLabel(sex: Sex | null, color: string | null): string {
   const parts = [color, sex ? sex.toLowerCase() : null].filter(Boolean);
   return parts.join(' ');
+}
+
+const CATEGORY_LABELS: Record<SaleCategory, string> = {
+  YEARLING: 'Yearling',
+  BREEDING_STOCK: 'Breeding Stock',
+  TWO_YEAR_OLD: '2YO',
+  WEANLING: 'Weanling',
+  MIXED: 'Mixed',
+  OTHER: 'Other',
+};
+
+/** Human label for a sale category. */
+export function categoryLabel(category: SaleCategory | null | undefined): string {
+  if (!category) return '';
+  return CATEGORY_LABELS[category] ?? category;
+}
+
+/**
+ * Returns a short category badge label for non-yearling sales (yearling is the
+ * default, so we don't badge it), or null when nothing should be shown.
+ */
+export function nonDefaultCategoryLabel(
+  category: SaleCategory | null | undefined,
+): string | null {
+  if (!category || category === 'YEARLING') return null;
+  return categoryLabel(category);
+}
+
+/** Returns the currency code to badge when it isn't USD, otherwise null. */
+export function nonUsdCurrency(currency: string | null | undefined): string | null {
+  if (!currency || currency === 'USD') return null;
+  return currency;
 }
 
 /** Map a 0..1 confidence into a coarse, honest label. Never invents precision. */

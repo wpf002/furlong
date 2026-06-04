@@ -1,4 +1,4 @@
-import { normalizeEntityName, formatCents, centsToNumber, type SearchQuery } from '@furlong/shared';
+import { normalizeEntityName, formatMoney, centsToNumber, type SearchQuery } from '@furlong/shared';
 import { prisma } from '@furlong/db';
 
 export interface SearchHipOut {
@@ -28,6 +28,7 @@ export interface SearchHipOut {
 
 export interface SearchResult {
   count: number;
+  currency: string;
   hips: SearchHipOut[];
 }
 
@@ -38,6 +39,9 @@ export interface SearchResult {
  */
 export async function runSearch(query: SearchQuery & { limit?: number }): Promise<SearchResult> {
   const { saleId, budgetLowCents, budgetHighCents, preferredSires, hiddenGemsOnly, limit } = query;
+
+  const sale = await prisma.sale.findUnique({ where: { id: saleId }, select: { currency: true } });
+  const currency = sale?.currency ?? 'USD';
 
   const hips = await prisma.hip.findMany({
     where: { saleId },
@@ -102,7 +106,7 @@ export async function runSearch(query: SearchQuery & { limit?: number }): Promis
         : '';
       oneLiner =
         `By ${sireName ?? 'unknown sire'} — predicted ` +
-        `${formatCents(v.predPriceLowCents)}–${formatCents(v.predPriceHighCents)}; ${note}.${caveat}`;
+        `${formatMoney(v.predPriceLowCents, currency)}–${formatMoney(v.predPriceHighCents, currency)}; ${note}.${caveat}`;
       valuation = {
         estValueLowCents: centsToNumber(v.estValueLowCents)!,
         estValueHighCents: centsToNumber(v.estValueHighCents)!,
@@ -134,5 +138,5 @@ export async function runSearch(query: SearchQuery & { limit?: number }): Promis
     };
   });
 
-  return { count: out.length, hips: out };
+  return { count: out.length, currency, hips: out };
 }

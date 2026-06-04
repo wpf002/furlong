@@ -1,5 +1,6 @@
 import { prisma } from '@furlong/db';
 import { normalizeEntityName } from '@furlong/shared';
+import { sendAlertNotifications } from './notify.js';
 
 /**
  * Create catalog-drop alerts when a sale's catalog is ingested. A user is
@@ -34,20 +35,22 @@ export async function createCatalogDropAlerts(saleId: string): Promise<number> {
     });
     if (existing) continue;
 
+    const title = `New catalog: ${sale.name} (${sale.year})`;
     const body =
       prefs.length === 0
         ? `${hips.length} hips now available — open the sale to see your shortlist.`
         : `Includes ${matched.length} of your preferred sire(s). ${hips.length} hips available.`;
     await prisma.alert.create({
-      data: {
-        userId: p.userId,
-        type: 'CATALOG_DROP',
-        saleId,
-        title: `New catalog: ${sale.name} (${sale.year})`,
-        body,
-      },
+      data: { userId: p.userId, type: 'CATALOG_DROP', saleId, title, body },
     });
-    // Email/SMS would fire here (no provider configured in dev — in-app only).
+    // Deliver via the user's chosen channels (email/SMS); best-effort.
+    const user = await prisma.user.findUnique({
+      where: { id: p.userId },
+      select: { email: true, phone: true, notifyEmail: true, notifySms: true },
+    });
+    if (user) {
+      void sendAlertNotifications(user, { title, body });
+    }
     created += 1;
   }
   return created;

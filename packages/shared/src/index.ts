@@ -136,6 +136,31 @@ export function formatCents(v: bigint | number | null | undefined): string {
 }
 
 /**
+ * Currency-aware money formatter (Phase 4). `minorUnits` are the integer minor
+ * units of `currency` (cents, pence, euro-cents). Whole-unit display — bloodstock
+ * prices are never quoted in sub-units. Falls back to "<CODE> <amount>" for any
+ * currency Intl doesn't know.
+ */
+export function formatMoney(
+  minorUnits: bigint | number | null | undefined,
+  currency = 'USD',
+): string {
+  if (minorUnits === null || minorUnits === undefined) return '—';
+  const raw = typeof minorUnits === 'bigint' ? Number(minorUnits) : minorUnits;
+  if (!Number.isFinite(raw)) return '—';
+  const major = Math.round(raw / 100);
+  try {
+    return major.toLocaleString('en-US', {
+      style: 'currency',
+      currency,
+      maximumFractionDigits: 0,
+    });
+  } catch {
+    return `${currency} ${major.toLocaleString('en-US')}`;
+  }
+}
+
+/**
  * Recursively convert BigInt values to numbers so a payload can be JSON
  * serialized (JSON.stringify throws on BigInt). Asserts each value is safe.
  * Use at the API boundary on anything coming out of Prisma.

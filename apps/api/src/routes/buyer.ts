@@ -33,6 +33,35 @@ export async function registerBuyerRoutes(app: FastifyInstance) {
       : prisma.buyerProfile.create({ data: { ...data, userId: u.id } });
   });
 
+  // ---- Notification preferences (email/SMS channels + phone) ----
+  app.get('/me/notifications', async (req, reply) => {
+    const u = await requireUser(req, reply);
+    if (!u) return;
+    return prisma.user.findUnique({
+      where: { id: u.id },
+      select: { email: true, phone: true, notifyEmail: true, notifySms: true },
+    });
+  });
+
+  app.put('/me/notifications', async (req, reply) => {
+    const u = await requireUser(req, reply);
+    if (!u) return;
+    const b = (req.body ?? {}) as {
+      phone?: string | null;
+      notifyEmail?: boolean;
+      notifySms?: boolean;
+    };
+    return prisma.user.update({
+      where: { id: u.id },
+      data: {
+        phone: b.phone != null ? b.phone.trim() || null : undefined,
+        notifyEmail: typeof b.notifyEmail === 'boolean' ? b.notifyEmail : undefined,
+        notifySms: typeof b.notifySms === 'boolean' ? b.notifySms : undefined,
+      },
+      select: { email: true, phone: true, notifyEmail: true, notifySms: true },
+    });
+  });
+
   // ---- Auto-filtered shortlist suggestions (profile -> ranked top hips) ----
   app.get<{ Querystring: { saleId?: string; limit?: string } }>(
     '/me/suggestions',
@@ -199,6 +228,8 @@ export async function registerBuyerRoutes(app: FastifyInstance) {
       auctionHouse: s.auctionHouse,
       name: s.name,
       year: s.year,
+      currency: s.currency,
+      category: s.category,
       startDate: s.startDate,
       hipCount: s._count.hips,
       upcoming: s.year >= currentYear,

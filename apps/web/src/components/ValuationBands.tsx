@@ -1,4 +1,4 @@
-import { formatCents } from '@furlong/shared';
+import { formatMoney } from '@furlong/shared';
 import type { Valuation } from '../lib/api';
 import { VALUATION_DISCLAIMER, confidenceLabel } from '../lib/format';
 import { Badge } from './Badge';
@@ -28,10 +28,12 @@ function RangeBar({
   band,
   min,
   span,
+  currency,
 }: {
   band: Band;
   min: number;
   span: number;
+  currency: string;
 }) {
   const left = pct(band.low, min, span);
   const right = pct(band.high, min, span);
@@ -43,8 +45,9 @@ function RangeBar({
         {band.label}
       </dt>
       <dd className="tnum text-sm font-semibold text-ink-900">
-        {formatCents(band.low)}{' '}
-        <span className="font-normal text-ink-500">–</span> {formatCents(band.high)}
+        {formatMoney(band.low, currency)}{' '}
+        <span className="font-normal text-ink-500">–</span>{' '}
+        {formatMoney(band.high, currency)}
       </dd>
       <div className="col-start-2 row-start-2">
         <div className="relative h-2 rounded-full bg-paper-300/70">
@@ -67,10 +70,12 @@ export function ValuationBands({
   valuation,
   showDisclaimer = true,
   compact = false,
+  currency = 'USD',
 }: {
   valuation: Valuation | null;
   showDisclaimer?: boolean;
   compact?: boolean;
+  currency?: string;
 }) {
   if (!valuation) {
     return (
@@ -123,7 +128,13 @@ export function ValuationBands({
 
       <dl className="space-y-3">
         {bands.map((band) => (
-          <RangeBar key={band.label} band={band} min={axisMin} span={span} />
+          <RangeBar
+            key={band.label}
+            band={band}
+            min={axisMin}
+            span={span}
+            currency={currency}
+          />
         ))}
       </dl>
 

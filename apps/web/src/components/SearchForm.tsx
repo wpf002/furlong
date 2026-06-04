@@ -3,7 +3,20 @@
 import { useEffect, useState } from 'react';
 import type { SearchQuery } from '@furlong/shared';
 import type { Sale } from '../lib/api';
-import { dollarsToCents, parseSires } from '../lib/format';
+import {
+  dollarsToCents,
+  nonDefaultCategoryLabel,
+  nonUsdCurrency,
+  parseSires,
+} from '../lib/format';
+import { Badge } from './Badge';
+
+function saleSuffix(sale: Sale): string {
+  const cat = nonDefaultCategoryLabel(sale.category);
+  const cur = nonUsdCurrency(sale.currency);
+  const tags = [cat, cur].filter(Boolean);
+  return tags.length ? ` · ${tags.join(' · ')}` : '';
+}
 
 export type SortMode = 'rank' | 'value';
 
@@ -66,6 +79,9 @@ export function SearchForm({
   }
 
   const noSales = sales.length === 0;
+  const selectedSale = sales.find((s) => s.id === saleId);
+  const selCategory = nonDefaultCategoryLabel(selectedSale?.category);
+  const selCurrency = nonUsdCurrency(selectedSale?.currency);
 
   return (
     <form
@@ -84,9 +100,16 @@ export function SearchForm({
           {sales.map((s) => (
             <option key={s.id} value={s.id}>
               {s.name} ({s.year}) — {s.auctionHouse}
+              {saleSuffix(s)}
             </option>
           ))}
         </select>
+        {(selCategory || selCurrency) && (
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            {selCategory && <Badge tone="neutral">{selCategory}</Badge>}
+            {selCurrency && <Badge tone="brass">{selCurrency}</Badge>}
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">

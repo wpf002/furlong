@@ -9,6 +9,14 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
 export type Sex = 'COLT' | 'FILLY' | 'GELDING' | 'MARE' | 'STALLION';
 
+export type SaleCategory =
+  | 'YEARLING'
+  | 'BREEDING_STOCK'
+  | 'TWO_YEAR_OLD'
+  | 'WEANLING'
+  | 'MIXED'
+  | 'OTHER';
+
 export interface Sale {
   id: string;
   auctionHouse: string;
@@ -16,6 +24,8 @@ export interface Sale {
   year: number;
   startDate: string | null;
   endDate: string | null;
+  currency?: string;
+  category?: SaleCategory;
 }
 
 export interface Valuation {
@@ -50,6 +60,7 @@ export interface SearchHip {
 export interface SearchResponse {
   count: number;
   hips: SearchHip[];
+  currency?: string;
 }
 
 // Shape returned by GET /sales/:id/hips — richer than the search payload.
@@ -153,6 +164,7 @@ export function getModelMetrics(): Promise<ModelMetrics> {
 export interface AuthUser {
   id: string;
   email: string;
+  token: string; // signed session token (Phase 4) — sent as Authorization: Bearer
 }
 
 export interface BuyerProfile {
@@ -167,6 +179,7 @@ export interface SuggestionsResponse {
   count: number;
   hips: SearchHip[];
   hasProfile: boolean;
+  currency?: string;
 }
 
 export interface ShortlistSummary {
@@ -221,9 +234,65 @@ export interface CalendarSale {
   startDate: string | null;
   hipCount: number;
   upcoming: boolean;
+  currency?: string;
+  category?: SaleCategory;
 }
 
 // The calendar is public (no auth header needed), so it reuses request().
 export function getCalendar(): Promise<CalendarSale[]> {
   return request<CalendarSale[]>('/calendar');
+}
+
+// ---------------------------------------------------------------------------
+// Cross-auction comparison (Phase 4). /sires and /compare are public; cents
+// are USD-normalized.
+// ---------------------------------------------------------------------------
+
+export interface SireSuggestion {
+  name: string;
+  count: number;
+}
+
+export interface CompareHouse {
+  auctionHouse: string;
+  n: number;
+  medianCents: number;
+  avgCents: number;
+  p25Cents: number;
+  p75Cents: number;
+  years: number;
+}
+
+export interface CompareResponse {
+  sire: string;
+  totalSold: number;
+  houses: CompareHouse[];
+}
+
+export function getSires(q: string, limit = 20): Promise<SireSuggestion[]> {
+  return request<SireSuggestion[]>(
+    `/sires?q=${encodeURIComponent(q)}&limit=${limit}`,
+  );
+}
+
+export function getCompare(sire: string): Promise<CompareResponse> {
+  return request<CompareResponse>(`/compare?sire=${encodeURIComponent(sire)}`);
+}
+
+// ---------------------------------------------------------------------------
+// Notification settings (Phase 4). /me/notifications requires auth — call via
+// useUser().userFetch, not the public request() helper.
+// ---------------------------------------------------------------------------
+
+export interface NotificationSettings {
+  email: string;
+  phone: string | null;
+  notifyEmail: boolean;
+  notifySms: boolean;
+}
+
+export interface NotificationSettingsInput {
+  phone?: string | null;
+  notifyEmail?: boolean;
+  notifySms?: boolean;
 }

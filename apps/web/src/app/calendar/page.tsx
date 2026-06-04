@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { CalendarSale } from '../../lib/api';
 import { getCalendar } from '../../lib/api';
+import { nonDefaultCategoryLabel, nonUsdCurrency } from '../../lib/format';
 import { Badge } from '../../components/Badge';
 
 function formatDate(iso: string | null): string | null {
@@ -104,6 +105,8 @@ export default function CalendarPage() {
               <ul className="space-y-3">
                 {yearSales.map((s) => {
                   const date = formatDate(s.startDate);
+                  const catLabel = nonDefaultCategoryLabel(s.category);
+                  const curLabel = nonUsdCurrency(s.currency);
                   return (
                     <li
                       key={s.id}
@@ -113,6 +116,8 @@ export default function CalendarPage() {
                         <div className="flex flex-wrap items-center gap-2">
                           <span className="font-serif text-lg text-ink-900">{s.name}</span>
                           {s.upcoming && <Badge tone="brass">Upcoming</Badge>}
+                          {catLabel && <Badge tone="neutral">{catLabel}</Badge>}
+                          {curLabel && <Badge tone="amber">{curLabel}</Badge>}
                         </div>
                         <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-ink-500">
                           <span>{s.auctionHouse}</span>

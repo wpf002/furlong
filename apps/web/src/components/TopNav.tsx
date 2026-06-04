@@ -8,6 +8,7 @@ import { useUser } from '../lib/useUser';
 
 const NAV = [
   { href: '/', label: 'Search' },
+  { href: '/compare', label: 'Compare' },
   { href: '/shortlists', label: 'Shortlists' },
   { href: '/calendar', label: 'Calendar' },
   { href: '/profile', label: 'Profile' },

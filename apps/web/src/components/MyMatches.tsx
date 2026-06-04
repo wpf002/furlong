@@ -17,6 +17,7 @@ export function MyMatches({ saleId, sales }: { saleId: string; sales: Sale[] }) 
   const [error, setError] = useState<string | null>(null);
   const [hips, setHips] = useState<SearchHip[] | null>(null);
   const [hasProfile, setHasProfile] = useState(true);
+  const [currency, setCurrency] = useState('USD');
 
   const sale = sales.find((s) => s.id === saleId);
 
@@ -31,6 +32,7 @@ export function MyMatches({ saleId, sales }: { saleId: string; sales: Sale[] }) 
       );
       setHips(res.hips ?? []);
       setHasProfile(res.hasProfile);
+      setCurrency(res.currency ?? 'USD');
     } catch (err) {
       if (isNotSignedIn(err)) {
         setError('Sign in to see matches tailored to your profile.');
@@ -118,7 +120,12 @@ export function MyMatches({ saleId, sales }: { saleId: string; sales: Sale[] }) 
               ) : (
                 <div className="space-y-4">
                   {hips.map((hip) => (
-                    <HipRow key={hip.id} hip={hip} saleId={saleId} />
+                    <HipRow
+                      key={hip.id}
+                      hip={hip}
+                      saleId={saleId}
+                      currency={currency}
+                    />
                   ))}
                 </div>
               )}

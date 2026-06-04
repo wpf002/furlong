@@ -2,6 +2,7 @@ import type { FastifyInstance } from 'fastify';
 import { request } from 'undici';
 import { prisma } from '@furlong/db';
 import { revalueSale } from '../valuation/revalueSale.js';
+import { valuateBroodmareSale } from '../valuation/broodmare.js';
 
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL ?? 'http://localhost:8000';
 
@@ -28,6 +29,11 @@ export async function registerSaleRoutes(app: FastifyInstance) {
   // 1d — Re-value all hips in a sale via the ML service.
   app.post<{ Params: { id: string } }>('/sales/:id/revalue', async (req) => {
     return revalueSale(req.params.id);
+  });
+
+  // 4 — Value broodmares in a BREEDING_STOCK sale by produce record.
+  app.post<{ Params: { id: string } }>('/sales/:id/value-broodmares', async (req) => {
+    return valuateBroodmareSale(req.params.id);
   });
 
   // 1f — Post-sale retrain seed: tell the ML service to reload comparables

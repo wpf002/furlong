@@ -106,7 +106,11 @@ export async function registerIngestRoutes(app: FastifyInstance) {
     if (!parsed.success) {
       return reply.status(400).send({ error: parsed.error.flatten() });
     }
-    const { saleId, created, updated } = await ingestCatalog(parsed.data);
+    const body = req.body as { category?: string; currency?: string };
+    const { saleId, created, updated } = await ingestCatalog(parsed.data, {
+      category: body.category as never,
+      currency: body.currency,
+    });
     const alerts = await createCatalogDropAlerts(saleId);
     return {
       saleId,

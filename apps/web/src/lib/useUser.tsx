@@ -34,7 +34,12 @@ function readStored(): AuthUser | null {
     const raw = window.localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed = JSON.parse(raw) as AuthUser;
-    if (parsed && typeof parsed.id === 'string' && typeof parsed.email === 'string') {
+    if (
+      parsed &&
+      typeof parsed.id === 'string' &&
+      typeof parsed.email === 'string' &&
+      typeof parsed.token === 'string'
+    ) {
       return parsed;
     }
   } catch {
@@ -92,7 +97,7 @@ export function UserProvider({ children }: { children: ReactNode }) {
           ...init,
           headers: {
             'Content-Type': 'application/json',
-            'x-user-id': current.id,
+            Authorization: `Bearer ${current.token}`,
             ...(init?.headers ?? {}),
           },
           cache: 'no-store',

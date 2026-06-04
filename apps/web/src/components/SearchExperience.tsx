@@ -25,6 +25,7 @@ export function SearchExperience({
 }) {
   const [hips, setHips] = useState<SearchHip[] | null>(null);
   const [count, setCount] = useState(0);
+  const [currency, setCurrency] = useState('USD');
   const [activeSaleId, setActiveSaleId] = useState('');
   const [selectedSaleId, setSelectedSaleId] = useState(sales[0]?.id ?? '');
   const [sort, setSort] = useState<SortMode>('rank');
@@ -44,6 +45,7 @@ export function SearchExperience({
       const res = await search(query);
       setHips(res.hips);
       setCount(res.count);
+      setCurrency(res.currency ?? 'USD');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Search failed.');
       setHips(null);
@@ -191,7 +193,12 @@ export function SearchExperience({
           ) : (
             <div className="space-y-4">
               {visible.map((hip) => (
-                <HipRow key={hip.id} hip={hip} saleId={activeSaleId} />
+                <HipRow
+                  key={hip.id}
+                  hip={hip}
+                  saleId={activeSaleId}
+                  currency={currency}
+                />
               ))}
             </div>
           )}
