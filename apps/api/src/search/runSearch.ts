@@ -99,13 +99,19 @@ export async function runSearch(query: SearchQuery & { limit?: number }): Promis
     let valuation: SearchHipOut['valuation'] = null;
     let oneLiner: string;
 
+    // Named animals (e.g. broodmares) read "<Name> (by <sire>)"; unnamed
+    // yearlings read "By <sire>".
+    const subject = h.horse.name
+      ? `${h.horse.name} (by ${sireName ?? 'unknown sire'})`
+      : `By ${sireName ?? 'unknown sire'}`;
+
     if (v) {
       const note = budgetHighCents != null ? 'within your budget' : 'based on historical comparables';
       const caveat = v.limitedComparables
         ? ' Limited comparable data — treat this estimate as directional.'
         : '';
       oneLiner =
-        `By ${sireName ?? 'unknown sire'} — predicted ` +
+        `${subject} — predicted ` +
         `${formatMoney(v.predPriceLowCents, currency)}–${formatMoney(v.predPriceHighCents, currency)}; ${note}.${caveat}`;
       valuation = {
         estValueLowCents: centsToNumber(v.estValueLowCents)!,
@@ -117,7 +123,7 @@ export async function runSearch(query: SearchQuery & { limit?: number }): Promis
         limitedComparables: v.limitedComparables,
       };
     } else {
-      oneLiner = `By ${sireName ?? 'unknown sire'} — not yet valued.`;
+      oneLiner = `${subject} — not yet valued.`;
     }
 
     return {

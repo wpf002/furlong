@@ -255,12 +255,13 @@ export interface SireSuggestion {
 
 export interface CompareHouse {
   auctionHouse: string;
+  currency: string;
   n: number;
   medianCents: number;
   avgCents: number;
   p25Cents: number;
   p75Cents: number;
-  years: number;
+  years: string | null;
 }
 
 export interface CompareResponse {

@@ -33,9 +33,13 @@ export async function registerCompareRoutes(app: FastifyInstance) {
     const norm = normalizeEntityName(req.query.sire ?? '');
     if (!norm) return reply.status(400).send({ error: 'sire is required' });
 
+    // Group by house AND currency — different houses sell in different money
+    // (USD vs GBP/guineas), so figures are NOT FX-converted; each row is in its
+    // own currency and the UI formats accordingly.
     const rows = await prisma.$queryRawUnsafe<
       Array<{
         house: string;
+        currency: string;
         n: bigint;
         median: number | null;
         avg: bigint | null;
@@ -45,7 +49,7 @@ export async function registerCompareRoutes(app: FastifyInstance) {
         maxy: number;
       }>
     >(
-      `SELECT s."auctionHouse" AS house,
+      `SELECT s."auctionHouse" AS house, s."currency" AS currency,
               count(*) AS n,
               percentile_cont(0.5) WITHIN GROUP (ORDER BY r."priceCents") AS median,
               avg(r."priceCents")::bigint AS avg,
@@ -58,13 +62,14 @@ export async function registerCompareRoutes(app: FastifyInstance) {
        JOIN "Horse" yh ON yh."id" = h."horseId"
        JOIN "Horse" sire ON sire."id" = yh."sireId"
        WHERE r."rna" = false AND r."priceCents" > 0 AND sire."normalizedName" = $1
-       GROUP BY s."auctionHouse"
+       GROUP BY s."auctionHouse", s."currency"
        ORDER BY count(*) DESC`,
       norm,
     );
 
     const houses = rows.map((r) => ({
       auctionHouse: r.house,
+      currency: r.currency,
       n: Number(r.n),
       medianCents: r.median != null ? Math.round(Number(r.median)) : null,
       avgCents: r.avg != null ? Number(r.avg) : null,

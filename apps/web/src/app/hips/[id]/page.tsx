@@ -1,9 +1,9 @@
 import Link from 'next/link';
-import { getSaleHips, type DetailHip, type Valuation } from '../../../lib/api';
+import { getSaleHips, getSales, type DetailHip, type Valuation } from '../../../lib/api';
 import { sexColorLabel, VALUATION_DISCLAIMER } from '../../../lib/format';
 import { ValuationBands } from '../../../components/ValuationBands';
 import { SaveToShortlist } from '../../../components/SaveToShortlist';
-import { formatCents } from '@furlong/shared';
+import { formatMoney } from '@furlong/shared';
 
 export const dynamic = 'force-dynamic';
 
@@ -49,10 +49,12 @@ export default async function HipDetailPage({
   }
 
   let hip: DetailHip | undefined;
+  let currency = 'USD';
   let error: string | null = null;
   try {
-    const hips = await getSaleHips(saleId);
+    const [hips, sales] = await Promise.all([getSaleHips(saleId), getSales().catch(() => [])]);
     hip = hips.find((h) => h.id === id);
+    currency = sales.find((s) => s.id === saleId)?.currency ?? 'USD';
   } catch (err) {
     error = err instanceof Error ? err.message : 'Unknown error';
   }
@@ -147,7 +149,7 @@ export default async function HipDetailPage({
         {sold != null && (
           <p className="mt-5 border-t border-ink/10 pt-4 text-sm text-ink-700">
             Sale result:{' '}
-            <span className="tnum font-semibold text-ink-900">{formatCents(sold)}</span>
+            <span className="tnum font-semibold text-ink-900">{formatMoney(sold, currency)}</span>
             {hip.result?.status ? (
               <span className="text-ink-500"> ({hip.result.status})</span>
             ) : null}
@@ -157,7 +159,7 @@ export default async function HipDetailPage({
 
       <section className="mt-6 rounded-2xl border border-ink/10 bg-paper-50 p-6 shadow-card">
         <h2 className="mb-4 font-serif text-lg text-ink-900">Valuation</h2>
-        <ValuationBands valuation={latest} showDisclaimer={false} />
+        <ValuationBands valuation={latest} currency={currency} showDisclaimer={false} />
         <p className="mt-4 border-t border-ink/10 pt-4 text-xs italic leading-relaxed text-ink-500">
           {VALUATION_DISCLAIMER} Bands reflect comparable historical sales; treat them as a
           guide, not a guarantee.

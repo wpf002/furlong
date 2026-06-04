@@ -74,6 +74,17 @@ export type ValuationResponse = z.infer<typeof ValuationResponseSchema>;
 const COUNTRY_SUFFIX = /\s*\((?:IRE|GB|USA|US|FR|GER|CAN|AUS|NZ|JPN|ARG|BRZ|ITY|SAF|CHI|URU)\)\s*$/i;
 
 /**
+ * Clean a display name: strip a trailing country code like " (GB)" / "(IRE)"
+ * but keep original casing. Matching uses normalizeEntityName; this is purely
+ * for what the user sees.
+ */
+export function cleanDisplayName(name: string | null | undefined): string | null {
+  if (name == null) return null;
+  const s = name.replace(COUNTRY_SUFFIX, '').trim();
+  return s || null;
+}
+
+/**
  * Normalize a horse/consignor/breeder name into a stable match key:
  * lowercased, country suffix stripped, punctuation removed, whitespace
  * collapsed. Returns null for empty/whitespace input.

@@ -111,7 +111,8 @@ export default function ComparePage() {
         <div className="rule-brass my-5 max-w-xs" />
         <p className="text-sm leading-relaxed text-ink-600">
           Pick a sire to see how the major auction houses priced its stock — median,
-          mid-range, and volume — side by side. Figures are USD-normalized.
+          mid-range, and volume — side by side. Each house is shown in its own sale
+          currency (not FX-converted).
         </p>
       </header>
 
@@ -216,8 +217,9 @@ export default function ComparePage() {
           </div>
 
           <p className="text-xs italic leading-relaxed text-ink-500">
-            Bars show each house&apos;s median sale price on a shared scale. Cross-house
-            comparisons normalize all sales to USD.
+            Bars show each house&apos;s median on a shared scale. Figures are in each
+            house&apos;s own sale currency and are not FX-converted, so compare like
+            currencies directly.
           </p>
         </section>
       )}
@@ -249,7 +251,7 @@ function HouseCard({
         Median
       </p>
       <p className="tnum font-serif text-3xl font-semibold leading-none text-racing-800">
-        {formatMoney(house.medianCents, 'USD')}
+        {formatMoney(house.medianCents, house.currency)}
       </p>
 
       <div className="mt-3 h-2.5 rounded-full bg-paper-300/70">
@@ -263,15 +265,15 @@ function HouseCard({
         <div className="flex items-center justify-between">
           <dt className="text-ink-500">Mid-range (p25–p75)</dt>
           <dd className="tnum font-medium text-ink-800">
-            {formatMoney(house.p25Cents, 'USD')}
+            {formatMoney(house.p25Cents, house.currency)}
             <span className="px-1 text-ink-400">–</span>
-            {formatMoney(house.p75Cents, 'USD')}
+            {formatMoney(house.p75Cents, house.currency)}
           </dd>
         </div>
         <div className="flex items-center justify-between">
           <dt className="text-ink-500">Average</dt>
           <dd className="tnum font-medium text-ink-800">
-            {formatMoney(house.avgCents, 'USD')}
+            {formatMoney(house.avgCents, house.currency)}
           </dd>
         </div>
         <div className="flex items-center justify-between">

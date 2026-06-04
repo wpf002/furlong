@@ -1,5 +1,5 @@
 import { prisma } from '@furlong/db';
-import { normalizeEntityName } from '@furlong/shared';
+import { normalizeEntityName, cleanDisplayName } from '@furlong/shared';
 
 /**
  * Find-or-create a Horse by its normalized name. Used for the shared pedigree
@@ -22,7 +22,7 @@ export async function resolveHorseByName(name: string | null): Promise<string | 
   if (existing) return existing.id;
 
   const created = await prisma.horse.create({
-    data: { name: name?.trim() || null, normalizedName: normalized },
+    data: { name: cleanDisplayName(name), normalizedName: normalized },
     select: { id: true },
   });
   return created.id;
