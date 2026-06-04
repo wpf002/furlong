@@ -34,6 +34,10 @@ export async function revalueSale(saleId: string): Promise<RevalueResult> {
       consignorName: hip.consignor?.name ?? null,
       saleYear: hip.sale.year,
       sex: hip.horse.sex ?? null,
+      color: hip.horse.color ?? null,
+      auctionHouse: hip.sale.auctionHouse,
+      saleName: hip.sale.name,
+      hipNumber: hip.hipNumber,
     };
 
     const res = await request(`${ML_SERVICE_URL}/value`, {
@@ -50,12 +54,12 @@ export async function revalueSale(saleId: string): Promise<RevalueResult> {
     const json = await res.body.json();
     const v = ValuationResponseSchema.parse(json);
 
-    // Phase 1 (comparables baseline): est-value and predicted-price are drawn
-    // from overlapping comparable sets, so a per-hip "hidden gem" signal isn't
-    // identifiable here — the score would be a near-constant market-trend
-    // artifact. Leaving it null avoids flagging every hip as a gem (honesty
-    // invariant). Real gem discrimination arrives with the Phase 2 model.
-    const hiddenGemScore = null;
+    // Phase 2: est-value comes from a pedigree-only model and predicted-price
+    // from the full-context model, so the gap is a real per-hip signal — a hip
+    // whose pedigree is worth more than its predicted sale price is a hidden gem.
+    const estMid = (v.estValueLowCents + v.estValueHighCents) / 2;
+    const predMid = (v.predPriceLowCents + v.predPriceHighCents) / 2;
+    const hiddenGemScore = (estMid - predMid) / Math.max(predMid, 1);
 
     await prisma.valuation.create({
       data: {

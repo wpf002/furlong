@@ -16,6 +16,8 @@ __pycache__/
 *.pyc
 services/ml/models/*.pkl
 services/ml/models/*.txt
+services/ml/models/*.joblib
+services/ml/models/*.json
 # data (raw catalogs/results are large + may be licensed — keep out of git)
 data/catalogs/*
 data/results/*

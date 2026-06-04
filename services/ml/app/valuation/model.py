@@ -291,9 +291,30 @@ def load_comparables() -> list[dict]:
     return comps
 
 
+_TRAINED_TRIED = False
+
+
+def _ensure_trained() -> None:
+    """Load the Phase 2 trained model + history once (lazy)."""
+    global _TRAINED_TRIED
+    if _TRAINED_TRIED:
+        return
+    _TRAINED_TRIED = True
+    try:
+        from app.valuation import trained
+        from app.training.features import load_sold_hips
+        trained.load(load_sold_hips())
+    except Exception as e:  # pragma: no cover
+        print("trained model not loaded (using comparables):", e)
+
+
 def reload_comparables() -> list[dict]:
-    """Force a refresh of the comparables cache; returns the new list."""
-    return load_comparables()
+    """Force a refresh of the comparables cache AND the trained model."""
+    global _TRAINED_TRIED
+    comps = load_comparables()
+    _TRAINED_TRIED = False
+    _ensure_trained()
+    return comps
 
 
 def _get_comps() -> list[dict]:
@@ -303,5 +324,39 @@ def _get_comps() -> list[dict]:
     return _COMPS_CACHE or []
 
 
+def current_model_version() -> str:
+    """Trained model version if loaded, else the comparables baseline version."""
+    try:
+        from app.valuation import trained
+        _ensure_trained()
+        if trained.is_loaded():
+            return trained.model_version() or MODEL_VERSION
+    except Exception:
+        pass
+    return MODEL_VERSION
+
+
+def current_metrics() -> dict | None:
+    """Eval metrics for the loaded trained model (None if comparables-only)."""
+    try:
+        from app.valuation import trained
+        _ensure_trained()
+        if trained.is_loaded():
+            return trained.metrics()
+    except Exception:
+        pass
+    return None
+
+
 def predict(features: dict) -> dict:
+    """Phase 2 trained model when available; comparables baseline as fallback."""
+    _ensure_trained()
+    try:
+        from app.valuation import trained
+        if trained.is_loaded():
+            result = trained.predict(features)
+            if result is not None:
+                return result
+    except Exception as e:  # pragma: no cover
+        print("trained predict failed, falling back to comparables:", e)
     return compute_valuation(features, _get_comps())

@@ -1,5 +1,6 @@
-import { getSales, type Sale } from '../lib/api';
+import { getSales, getModelMetrics, type Sale, type ModelMetrics } from '../lib/api';
 import { SearchExperience } from '../components/SearchExperience';
+import { ModelPanel } from '../components/ModelPanel';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,6 +12,13 @@ export default async function Home() {
     sales = await getSales();
   } catch (err) {
     salesError = err instanceof Error ? err.message : 'Unknown error';
+  }
+
+  let modelMetrics: ModelMetrics | null = null;
+  try {
+    modelMetrics = await getModelMetrics();
+  } catch {
+    /* model panel is optional — never block the page on it */
   }
 
   return (
@@ -29,6 +37,8 @@ export default async function Home() {
           valuation bands.
         </p>
       </header>
+
+      <ModelPanel data={modelMetrics} />
 
       <SearchExperience sales={sales} salesError={salesError} />
     </main>

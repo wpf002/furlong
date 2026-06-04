@@ -10,14 +10,16 @@ from fastapi import FastAPI, UploadFile, File
 from pydantic import BaseModel
 
 from app.parsing.keeneland import parse_keeneland_catalog
-from app.valuation.model import predict, reload_comparables, MODEL_VERSION
+from app.valuation.model import (
+    predict, reload_comparables, current_model_version, current_metrics,
+)
 
 app = FastAPI(title="furlong-ml")
 
 
 @app.get("/health")
 def health() -> dict:
-    return {"ok": True, "service": "furlong-ml", "model_version": MODEL_VERSION}
+    return {"ok": True, "service": "furlong-ml", "model_version": current_model_version()}
 
 
 @app.post("/parse-catalog")
@@ -40,3 +42,19 @@ def value(req: FeatureRequest) -> dict:
 def reload_comps() -> dict:
     comps = reload_comparables()
     return {"comparables": len(comps)}
+
+
+@app.get("/metrics")
+def metrics() -> dict:
+    """Eval metrics for the active model (recursive-loop transparency)."""
+    return {"modelVersion": current_model_version(), "metrics": current_metrics()}
+
+
+@app.post("/train")
+def train() -> dict:
+    """Retrain on all current results, version + register the model, reload it.
+    Synchronous (~40s) — this is the retrain job; schedule via cron/queue."""
+    from app.training.train import main as train_main
+    train_main()
+    reload_comparables()  # also reloads the freshly trained model
+    return {"modelVersion": current_model_version(), "metrics": current_metrics()}

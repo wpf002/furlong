@@ -124,3 +124,21 @@ export function search(query: SearchQuery): Promise<SearchResponse> {
 export function getSaleHips(saleId: string): Promise<DetailHip[]> {
   return request<DetailHip[]>(`/sales/${encodeURIComponent(saleId)}/hips`);
 }
+
+export interface ModelMetrics {
+  modelVersion: string | null;
+  metrics: {
+    improvement_pct?: number;
+    p10_p90_coverage?: number;
+    n_results_seen?: number;
+    n_sales_seen?: number;
+    model_mae_log?: number;
+    baseline_mae_log?: number;
+    model_beats_baseline?: boolean;
+    trained_through_year?: number;
+  } | null;
+}
+
+export function getModelMetrics(): Promise<ModelMetrics> {
+  return request<ModelMetrics>('/model/metrics');
+}
