@@ -38,6 +38,7 @@ export async function revalueSale(saleId: string): Promise<RevalueResult> {
       auctionHouse: hip.sale.auctionHouse,
       saleName: hip.sale.name,
       hipNumber: hip.hipNumber,
+      currency: hip.sale.currency,
     };
 
     const res = await request(`${ML_SERVICE_URL}/value`, {

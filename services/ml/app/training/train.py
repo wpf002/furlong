@@ -66,101 +66,103 @@ def _mae(pred: np.ndarray, actual: np.ndarray) -> float:
     return float(np.median(np.abs(pred - actual)))
 
 
-def main() -> None:
-    t0 = time.time()
-    raw = load_sold_hips()
-    feat = build_features(raw)
-    print(f"loaded {len(feat):,} sold rows ({feat['year'].min()}-{feat['year'].max()})")
+# Currencies to train a model for, and the years to hold out for each.
+MARKETS = {"USD": [2024, 2025], "GNS": [2025]}
 
-    train = feat[~feat["year"].isin(HOLDOUT_YEARS)].copy()
-    test = feat[feat["year"].isin(HOLDOUT_YEARS)].copy()
-    print(f"train {len(train):,} | test {len(test):,} (holdout {HOLDOUT_YEARS})")
 
-    # ---- price model (context-aware) ----
+def _segment(col: str, test, model_p50, yte, baseline) -> dict:
+    out = {}
+    for key, idx in test.groupby(col, observed=True).groups.items():
+        i = test.index.get_indexer(idx)
+        base_i = baseline[i]
+        ok = ~np.isnan(base_i)
+        out[str(key)] = {
+            "n": int(len(i)),
+            "model_mae_log": round(_mae(model_p50[i], yte[i]), 4),
+            "baseline_mae_log": round(_mae(base_i[ok], yte[i][ok]), 4) if ok.any() else None,
+        }
+    return out
+
+
+def train_one(feat: pd.DataFrame, currency: str, holdout_years: list[int]) -> dict:
+    """Train + eval + save one market's (currency's) model. Priors in `feat` are
+    already computed within this currency, so guinea and dollar prices never mix."""
+    has_test = feat["year"].isin(holdout_years).sum() >= 20
+    train = feat[~feat["year"].isin(holdout_years)].copy() if has_test else feat.copy()
+    test = feat[feat["year"].isin(holdout_years)].copy() if has_test else feat.iloc[0:0].copy()
+
     price_cols = NUMERIC_FEATURES + CATEGORICAL_FEATURES
-    price_models = _fit_quantiles(train[price_cols], train[TARGET].to_numpy(), CATEGORICAL_FEATURES)
-
-    # ---- value model (pedigree only) ----
     value_cols = VALUE_NUMERIC + VALUE_CATEGORICAL
+    price_models = _fit_quantiles(train[price_cols], train[TARGET].to_numpy(), CATEGORICAL_FEATURES)
     value_models = _fit_quantiles(train[value_cols], train[TARGET].to_numpy(), VALUE_CATEGORICAL)
 
-    # ---- evaluation on holdout ----
-    yte = test[TARGET].to_numpy()
-    price_pred = _predict_quantiles(price_models, test[price_cols])
-    model_p50 = price_pred[0.50]
-
-    # baseline: comparables = same-sire prior mean (fallback to market prior)
-    baseline = test["sire_prior_mean"].to_numpy()
-    mkt = test["market_prior_mean"].to_numpy()
-    baseline = np.where(np.isnan(baseline), mkt, baseline)
-    have_baseline = ~np.isnan(baseline)
-
-    model_mae = _mae(model_p50[have_baseline], yte[have_baseline])
-    base_mae = _mae(baseline[have_baseline], yte[have_baseline])
-    # interval coverage (P10-P90 should cover ~80%)
-    covered = (yte >= price_pred[0.10]) & (yte <= price_pred[0.90])
-    coverage = float(np.mean(covered))
-
-    # error by segment — house and sale (where the model is weak/strong)
-    def _segment(col: str) -> dict:
-        out = {}
-        for key, idx in test.groupby(col, observed=True).groups.items():
-            i = test.index.get_indexer(idx)
-            base_i = baseline[i]
-            ok = ~np.isnan(base_i)
-            out[str(key)] = {
-                "n": int(len(i)),
-                "model_mae_log": round(_mae(model_p50[i], yte[i]), 4),
-                "baseline_mae_log": round(_mae(base_i[ok], yte[i][ok]), 4) if ok.any() else None,
-            }
-        return out
-
-    seg = _segment("auctionHouse")
-
-    # data fingerprint so each retrain on fresh data yields a distinct version
-    version = f"{MODEL_FAMILY}-{MODEL_VERSION}+n{len(train)}"
-
-    metrics = {
-        "model": version,
+    version = f"{MODEL_FAMILY}-{MODEL_VERSION}-{currency}+n{len(train)}"
+    metrics: dict = {
+        "model": version, "currency": currency,
         "trained_through_year": int(train["year"].max()),
         "n_train": int(len(train)), "n_test": int(len(test)),
-        "holdout_years": HOLDOUT_YEARS,
-        "model_mae_log": round(model_mae, 4),
-        "baseline_mae_log": round(base_mae, 4),
-        "improvement_pct": round(100 * (base_mae - model_mae) / base_mae, 1),
-        "p10_p90_coverage": round(coverage, 3),
-        "by_house": seg,
-        "by_sale": _segment("saleName"),
-        "n_sales_seen": int(feat.groupby(["auctionHouse", "saleName", "year"]).ngroups),
         "n_results_seen": int(len(feat)),
-        "model_beats_baseline": bool(model_mae < base_mae),
+        "n_sales_seen": int(feat.groupby(["auctionHouse", "saleName", "year"]).ngroups),
     }
-    print(json.dumps({k: metrics[k] for k in
-                      ["model", "model_mae_log", "baseline_mae_log", "improvement_pct",
-                       "p10_p90_coverage", "model_beats_baseline"]}, indent=2))
+    if len(test) >= 20:
+        yte = test[TARGET].to_numpy()
+        price_pred = _predict_quantiles(price_models, test[price_cols])
+        p50 = price_pred[0.50]
+        baseline = test["sire_prior_mean"].to_numpy()
+        baseline = np.where(np.isnan(baseline), test["market_prior_mean"].to_numpy(), baseline)
+        hb = ~np.isnan(baseline)
+        mmae, bmae = _mae(p50[hb], yte[hb]), _mae(baseline[hb], yte[hb])
+        metrics.update({
+            "holdout_years": holdout_years,
+            "model_mae_log": round(mmae, 4),
+            "baseline_mae_log": round(bmae, 4),
+            "improvement_pct": round(100 * (bmae - mmae) / bmae, 1),
+            "p10_p90_coverage": round(float(np.mean((yte >= price_pred[0.10]) & (yte <= price_pred[0.90]))), 3),
+            "model_beats_baseline": bool(mmae < bmae),
+            "by_house": _segment("auctionHouse", test, p50, yte, baseline),
+        })
 
-    MODELS_DIR.mkdir(parents=True, exist_ok=True)
     bundle = {
-        "version": version,
+        "version": version, "currency": currency,
         "price_models": price_models, "price_cols": price_cols,
         "value_models": value_models, "value_cols": value_cols,
-        "quantiles": QUANTILES,
-        "categorical_features": CATEGORICAL_FEATURES,
+        "quantiles": QUANTILES, "categorical_features": CATEGORICAL_FEATURES,
         "metrics": metrics,
     }
-    # Registry: keep every version, never overwrite; "current" points to latest.
-    joblib.dump(bundle, MODELS_DIR / f"valuation_model_{version}.joblib")
-    joblib.dump(bundle, MODELS_DIR / "valuation_model.joblib")
-    (MODELS_DIR / "metrics.json").write_text(json.dumps(metrics, indent=2))
+    joblib.dump(bundle, MODELS_DIR / f"valuation_model_{currency}.joblib")
+    if currency == "USD":  # default/back-compat model + the metrics the UI panel reads
+        joblib.dump(bundle, MODELS_DIR / "valuation_model.joblib")
+        (MODELS_DIR / "metrics.json").write_text(json.dumps(metrics, indent=2))
+
     registry_path = MODELS_DIR / "registry.json"
     registry = json.loads(registry_path.read_text()) if registry_path.exists() else []
-    registry = [r for r in registry if r.get("version") != version]  # idempotent
-    registry.append({k: metrics[k] for k in
-                     ["model", "trained_through_year", "n_train", "n_test",
+    registry = [r for r in registry if r.get("model") != version]
+    registry.append({k: metrics.get(k) for k in
+                     ["model", "currency", "trained_through_year", "n_train", "n_test",
                       "model_mae_log", "baseline_mae_log", "improvement_pct",
                       "p10_p90_coverage", "n_sales_seen", "n_results_seen"]})
     registry_path.write_text(json.dumps(registry, indent=2))
-    print(f"saved model {version} (+registry, {len(registry)} versions) to {MODELS_DIR}  [{time.time()-t0:.1f}s]")
+    return metrics
+
+
+def main() -> None:
+    t0 = time.time()
+    raw = load_sold_hips()
+    print(f"loaded {len(raw):,} sold rows; currencies {sorted(raw['currency'].unique())}")
+    MODELS_DIR.mkdir(parents=True, exist_ok=True)
+
+    for currency, holdout in MARKETS.items():
+        sub = raw[raw["currency"] == currency]
+        if len(sub) < 500:
+            print(f"{currency}: only {len(sub)} rows — skipping")
+            continue
+        feat = build_features(sub)  # priors computed WITHIN this currency
+        m = train_one(feat, currency, holdout)
+        imp = m.get("improvement_pct")
+        print(f"{currency}: {m['model']} | train {m['n_train']:,} | "
+              + (f"vs baseline {imp:+}% (mae {m.get('model_mae_log')} v {m.get('baseline_mae_log')}), "
+                 f"coverage {m.get('p10_p90_coverage')}" if imp is not None else "no holdout eval"))
+    print(f"done [{time.time()-t0:.1f}s]")
 
 
 if __name__ == "__main__":

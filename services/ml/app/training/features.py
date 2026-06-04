@@ -47,6 +47,7 @@ def load_sold_hips() -> pd.DataFrame:
     query = """
         SELECT r."priceCents"::float8       AS price_cents,
                s."year"                      AS year,
+               s."currency"                  AS currency,
                s."auctionHouse"             AS "auctionHouse",
                s."name"                      AS "saleName",
                h."sessionNumber"            AS "sessionNumber",

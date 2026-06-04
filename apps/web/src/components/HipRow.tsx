@@ -90,6 +90,16 @@ export function HipRow({
             )}
           </p>
 
+          {hip.produce && (
+            <p className="mt-1.5 text-xs text-ink-600">
+              <span className="text-ink/40">Produce</span> {hip.produce.nFoals}{' '}
+              {hip.produce.nFoals === 1 ? 'foal' : 'foals'} sold
+              {hip.produce.medianFoalCents != null && (
+                <> · median {formatMoney(hip.produce.medianFoalCents, currency)}</>
+              )}
+            </p>
+          )}
+
           {hip.oneLiner && (
             <p className="mt-3 border-t border-ink/5 pt-3 text-sm leading-relaxed text-ink-700">
               {hip.oneLiner}
@@ -97,9 +107,9 @@ export function HipRow({
           )}
         </div>
 
-          {/* Valuation, or the actual price for sales that already happened */}
+          {/* Actual price (settled sales) and/or the model estimate */}
           <div className="w-full shrink-0 sm:w-72 sm:border-l sm:border-ink/10 sm:pl-5">
-            {soldCents != null && !hip.valuation ? (
+            {soldCents != null ? (
               <div>
                 <p className="text-[11px] font-medium uppercase tracking-wide text-ink-500">
                   Sold for
@@ -107,8 +117,17 @@ export function HipRow({
                 <p className="tnum font-serif text-2xl font-semibold leading-none text-racing-800">
                   {formatMoney(soldCents, currency)}
                 </p>
+                {hip.valuation && (
+                  <p className="mt-1.5 text-xs text-ink-500">
+                    Model est.{' '}
+                    <span className="tnum">
+                      {formatMoney(hip.valuation.predPriceLowCents, currency)}–
+                      {formatMoney(hip.valuation.predPriceHighCents, currency)}
+                    </span>
+                  </p>
+                )}
               </div>
-            ) : hip.result?.rna && !hip.valuation ? (
+            ) : hip.result?.rna ? (
               <p className="text-sm text-ink-500">Not sold (RNA)</p>
             ) : (
               <ValuationBands

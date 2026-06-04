@@ -94,10 +94,13 @@ export default function ComparePage() {
     }
   }, []);
 
-  // Shared scale for the median bars so houses are visually comparable.
-  const maxMedian = data
-    ? Math.max(1, ...data.houses.map((h) => h.medianCents))
-    : 1;
+  // Bars are normalized WITHIN each currency (different money isn't comparable
+  // on one scale), so the longest bar per currency represents that currency's
+  // top median.
+  const maxByCurrency: Record<string, number> = {};
+  for (const h of data?.houses ?? []) {
+    maxByCurrency[h.currency] = Math.max(maxByCurrency[h.currency] ?? 1, h.medianCents);
+  }
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
@@ -211,15 +214,15 @@ export default function ComparePage() {
                 key={house.auctionHouse}
                 house={house}
                 fill={houseFill(i)}
-                maxMedian={maxMedian}
+                maxMedian={maxByCurrency[house.currency] ?? 1}
               />
             ))}
           </div>
 
           <p className="text-xs italic leading-relaxed text-ink-500">
-            Bars show each house&apos;s median on a shared scale. Figures are in each
-            house&apos;s own sale currency and are not FX-converted, so compare like
-            currencies directly.
+            Bars are scaled within each currency (different money isn&apos;t comparable on
+            one axis). Figures are in each house&apos;s own sale currency and are not
+            FX-converted.
           </p>
         </section>
       )}

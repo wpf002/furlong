@@ -24,6 +24,7 @@ export interface SearchHipOut {
     limitedComparables: boolean;
   } | null;
   result: { priceCents: number | null; rna: boolean } | null;
+  produce: { nFoals: number; medianFoalCents: number | null } | null;
   oneLiner: string;
 }
 
@@ -121,8 +122,28 @@ export async function runSearch(query: SearchQuery & { limit?: number }): Promis
       ? { priceCents: centsToNumber(h.result.priceCents), rna: h.result.rna }
       : null;
 
+    // Broodmare produce record, if this valuation carries one.
+    const feat = (v?.features ?? null) as { nFoals?: number; medianFoalCents?: number } | null;
+    const produce =
+      feat && typeof feat.nFoals === 'number' && feat.nFoals > 0
+        ? { nFoals: feat.nFoals, medianFoalCents: feat.medianFoalCents ?? null }
+        : null;
+
+    // Always expose the model estimate when one exists (shown alongside the
+    // actual price for settled sales).
+    if (v) {
+      valuation = {
+        estValueLowCents: centsToNumber(v.estValueLowCents)!,
+        estValueHighCents: centsToNumber(v.estValueHighCents)!,
+        predPriceLowCents: centsToNumber(v.predPriceLowCents)!,
+        predPriceHighCents: centsToNumber(v.predPriceHighCents)!,
+        confidence: v.confidence,
+        hiddenGemScore: v.hiddenGemScore,
+        limitedComparables: v.limitedComparables,
+      };
+    }
+
     if (soldCents != null) {
-      // A real, settled price beats any estimate.
       oneLiner = `${subject} — sold for ${formatMoney(soldCents, currency)}.`;
     } else if (h.result?.rna) {
       oneLiner = `${subject} — not sold (RNA).`;
@@ -134,15 +155,6 @@ export async function runSearch(query: SearchQuery & { limit?: number }): Promis
       oneLiner =
         `${subject} — predicted ` +
         `${formatMoney(v.predPriceLowCents, currency)}–${formatMoney(v.predPriceHighCents, currency)}; ${note}.${caveat}`;
-      valuation = {
-        estValueLowCents: centsToNumber(v.estValueLowCents)!,
-        estValueHighCents: centsToNumber(v.estValueHighCents)!,
-        predPriceLowCents: centsToNumber(v.predPriceLowCents)!,
-        predPriceHighCents: centsToNumber(v.predPriceHighCents)!,
-        confidence: v.confidence,
-        hiddenGemScore: v.hiddenGemScore,
-        limitedComparables: v.limitedComparables,
-      };
     } else {
       oneLiner = `${subject} — not yet valued.`;
     }
@@ -162,6 +174,7 @@ export async function runSearch(query: SearchQuery & { limit?: number }): Promis
       consignorName: h.consignor?.name ?? null,
       valuation,
       result,
+      produce,
       oneLiner,
     };
   });

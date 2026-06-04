@@ -55,6 +55,7 @@ export interface SearchHip {
   consignorName: string | null;
   valuation: Valuation | null;
   result: { priceCents: number | null; rna: boolean } | null;
+  produce: { nFoals: number; medianFoalCents: number | null } | null;
   oneLiner: string;
 }
 
