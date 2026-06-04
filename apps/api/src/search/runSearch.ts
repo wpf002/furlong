@@ -23,6 +23,7 @@ export interface SearchHipOut {
     hiddenGemScore: number | null;
     limitedComparables: boolean;
   } | null;
+  result: { priceCents: number | null; rna: boolean } | null;
   oneLiner: string;
 }
 
@@ -60,11 +61,17 @@ export async function runSearch(query: SearchQuery & { limit?: number }): Promis
 
   const filtered = hips.filter((h) => {
     const v = h.valuations[0];
+    // Budget filters against the predicted band (upcoming sales) or the actual
+    // sold price (sales that already happened); hips with neither are excluded.
+    const soldForFilter =
+      h.result && !h.result.rna && h.result.priceCents != null ? Number(h.result.priceCents) : null;
     if (budgetHighCents != null) {
-      if (!v || Number(v.predPriceLowCents) > budgetHighCents) return false;
+      const lo = v ? Number(v.predPriceLowCents) : soldForFilter;
+      if (lo == null || lo > budgetHighCents) return false;
     }
     if (budgetLowCents != null) {
-      if (!v || Number(v.predPriceHighCents) < budgetLowCents) return false;
+      const hi = v ? Number(v.predPriceHighCents) : soldForFilter;
+      if (hi == null || hi < budgetLowCents) return false;
     }
     if (preferredNormalized.length > 0) {
       const sireNorm = normalizeEntityName(h.horse.sire?.name ?? null);
@@ -105,7 +112,21 @@ export async function runSearch(query: SearchQuery & { limit?: number }): Promis
       ? `${h.horse.name} (by ${sireName ?? 'unknown sire'})`
       : `By ${sireName ?? 'unknown sire'}`;
 
-    if (v) {
+    // Actual result, for sales that have already happened.
+    const soldCents =
+      h.result && !h.result.rna && h.result.priceCents != null
+        ? centsToNumber(h.result.priceCents)
+        : null;
+    const result = h.result
+      ? { priceCents: centsToNumber(h.result.priceCents), rna: h.result.rna }
+      : null;
+
+    if (soldCents != null) {
+      // A real, settled price beats any estimate.
+      oneLiner = `${subject} — sold for ${formatMoney(soldCents, currency)}.`;
+    } else if (h.result?.rna) {
+      oneLiner = `${subject} — not sold (RNA).`;
+    } else if (v) {
       const note = budgetHighCents != null ? 'within your budget' : 'based on historical comparables';
       const caveat = v.limitedComparables
         ? ' Limited comparable data — treat this estimate as directional.'
@@ -140,6 +161,7 @@ export async function runSearch(query: SearchQuery & { limit?: number }): Promis
       },
       consignorName: h.consignor?.name ?? null,
       valuation,
+      result,
       oneLiner,
     };
   });

@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { formatMoney } from '@furlong/shared';
 import type { SearchHip } from '../lib/api';
 import { sexColorLabel } from '../lib/format';
 import { ValuationBands } from './ValuationBands';
@@ -17,6 +18,10 @@ export function HipRow({
   const sire = horse.sireName ?? 'Unknown sire';
   const dam = horse.damName ?? 'Unknown dam';
   const meta = sexColorLabel(horse.sex, horse.color);
+  const soldCents =
+    hip.result && !hip.result.rna && hip.result.priceCents != null
+      ? hip.result.priceCents
+      : null;
   const isGem =
     hip.valuation?.hiddenGemScore != null && hip.valuation.hiddenGemScore > 0;
 
@@ -92,14 +97,27 @@ export function HipRow({
           )}
         </div>
 
-          {/* Valuation */}
+          {/* Valuation, or the actual price for sales that already happened */}
           <div className="w-full shrink-0 sm:w-72 sm:border-l sm:border-ink/10 sm:pl-5">
-            <ValuationBands
-              valuation={hip.valuation}
-              showDisclaimer={false}
-              compact
-              currency={currency}
-            />
+            {soldCents != null && !hip.valuation ? (
+              <div>
+                <p className="text-[11px] font-medium uppercase tracking-wide text-ink-500">
+                  Sold for
+                </p>
+                <p className="tnum font-serif text-2xl font-semibold leading-none text-racing-800">
+                  {formatMoney(soldCents, currency)}
+                </p>
+              </div>
+            ) : hip.result?.rna && !hip.valuation ? (
+              <p className="text-sm text-ink-500">Not sold (RNA)</p>
+            ) : (
+              <ValuationBands
+                valuation={hip.valuation}
+                showDisclaimer={false}
+                compact
+                currency={currency}
+              />
+            )}
           </div>
         </div>
       </Link>

@@ -110,7 +110,7 @@ def main(years: list[int], books: list[int]) -> None:
                 catalog = {
                     "auctionHouse": "TATTERSALLS",
                     "saleName": f"October Yearling Sale Book {book}",
-                    "year": year, "currency": "GBP", "category": "YEARLING", "hips": hips,
+                    "year": year, "currency": "GNS", "category": "YEARLING", "hips": hips,
                     "report": {"pagesScanned": n, "blocksDetected": n, "hipsParsed": n,
                                "hipsSkipped": 0, "parseRate": 1.0, "skipped": []},
                 }

@@ -54,6 +54,7 @@ export interface SearchHip {
   horse: SearchHipHorse;
   consignorName: string | null;
   valuation: Valuation | null;
+  result: { priceCents: number | null; rna: boolean } | null;
   oneLiner: string;
 }
 

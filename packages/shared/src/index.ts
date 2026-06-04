@@ -160,6 +160,8 @@ export function formatMoney(
   const raw = typeof minorUnits === 'bigint' ? Number(minorUnits) : minorUnits;
   if (!Number.isFinite(raw)) return '—';
   const major = Math.round(raw / 100);
+  // Guineas (Tattersalls/UK) aren't an ISO currency — quoted as "N gns".
+  if (currency === 'GNS') return `${major.toLocaleString('en-US')} gns`;
   try {
     return major.toLocaleString('en-US', {
       style: 'currency',
