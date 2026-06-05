@@ -218,29 +218,43 @@ export async function registerIngestRoutes(app: FastifyInstance) {
       }
       const candidates = await prisma.horse.findMany({
         where: { normalizedName: norm },
-        select: { id: true, sex: true, foalingYear: true },
+        select: {
+          id: true,
+          sex: true,
+          foalingYear: true,
+          sire: { select: { normalizedName: true } },
+        },
       });
       if (candidates.length === 0) {
         unmatched += 1;
         continue;
       }
-      // Age plausibility: a horse running in 2023 is foaled no earlier than
-      // ~2013 (a 10yo campaigner). TB names are reused across generations, so
-      // name-only matching otherwise attaches a 2023 record to a same-named
-      // horse foaled decades earlier. Drop implausibly-old matches; keep
-      // unknown-foaling horses (can't disprove). The exact fix is name+foaling
-      // matching from the Equibase PP feed (which carries FoalingDate).
-      let targets = candidates.filter(
-        (h) => h.foalingYear == null || h.foalingYear >= RACING_PLAUSIBLE_MIN_FOAL_YEAR,
-      );
+
+      const fy = typeof raw.foalingYear === 'number' ? raw.foalingYear : null;
+      let targets;
+      if (fy != null) {
+        // EXACT path (Equibase PP feed carries YearOfBirth): the matched horse
+        // must share the foaling year, or have an unknown one. This is what
+        // eliminates same-era and cross-generation name collisions.
+        targets = candidates.filter((h) => h.foalingYear == null || h.foalingYear === fy);
+      } else {
+        // Chart-only fallback (no foaling year in the feed): a horse running in
+        // 2023 is foaled no earlier than ~2013 (a 10yo campaigner). Drop
+        // implausibly-old same-name matches; keep unknown-foaling horses.
+        targets = candidates.filter(
+          (h) => h.foalingYear == null || h.foalingYear >= RACING_PLAUSIBLE_MIN_FOAL_YEAR,
+        );
+      }
       if (targets.length === 0) {
         unmatched += 1;
         continue;
       }
-      const fy = typeof raw.foalingYear === 'number' ? raw.foalingYear : null;
-      if (fy != null) {
-        const byYear = targets.filter((h) => h.foalingYear === fy);
-        if (byYear.length > 0) targets = byYear;
+
+      // Sire tiebreaker (exact path): prefer a candidate whose sire matches.
+      const sireNorm = normalizeEntityName(typeof raw.sireName === 'string' ? raw.sireName : null);
+      if (sireNorm) {
+        const bySire = targets.filter((h) => h.sire?.normalizedName === sireNorm);
+        if (bySire.length > 0) targets = bySire;
       }
       const sex = typeof raw.sex === 'string' ? raw.sex : null;
       if (sex) {
