@@ -1,12 +1,17 @@
 import type { FastifyInstance } from 'fastify';
 import { request } from 'undici';
 import { prisma } from '@furlong/db';
-import { ParseCatalogResponseSchema, numberToCents } from '@furlong/shared';
+import { ParseCatalogResponseSchema, numberToCents, normalizeEntityName } from '@furlong/shared';
 import { ingestCatalog } from '../ingest/ingestCatalog.js';
 import { parseCsv } from '../ingest/csv.js';
 import { createCatalogDropAlerts } from '../alerts.js';
 
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL ?? 'http://localhost:8000';
+
+// Oldest foaling year plausibly active in the Equibase 2023 eval feed (a ~10yo
+// campaigner). Guards name-only racing-record matching against cross-generation
+// collisions. Bump per feed season; production matches name+foalingYear exactly.
+const RACING_PLAUSIBLE_MIN_FOAL_YEAR = 2013;
 
 const AUCTION_HOUSES = [
   'KEENELAND',
@@ -188,6 +193,81 @@ export async function registerIngestRoutes(app: FastifyInstance) {
     }
 
     return { imported, skipped };
+  });
+
+  // 4 — Ingest horse racing records (e.g. parsed from an Equibase feed) and
+  // attach them to existing horses by name. This is the licensed-feed path for
+  // horses-in-training: a record matched to a catalogued horse (a broodmare's
+  // own form, a 2YO's juvenile starts) powers the racing-age valuation and the
+  // card's race-record line. Match key is normalizedName, with foalingYear/sex
+  // as tiebreakers when the feed supplies them.
+  app.post('/ingest/racing-records', async (req, reply) => {
+    const body = req.body;
+    if (!Array.isArray(body)) {
+      return reply.status(400).send({ error: 'expected a JSON array of racing records' });
+    }
+    let matched = 0;
+    let updated = 0;
+    let unmatched = 0;
+
+    for (const raw of body as Array<Record<string, unknown>>) {
+      const norm = normalizeEntityName(typeof raw.name === 'string' ? raw.name : null);
+      if (!norm) {
+        unmatched += 1;
+        continue;
+      }
+      const candidates = await prisma.horse.findMany({
+        where: { normalizedName: norm },
+        select: { id: true, sex: true, foalingYear: true },
+      });
+      if (candidates.length === 0) {
+        unmatched += 1;
+        continue;
+      }
+      // Age plausibility: a horse running in 2023 is foaled no earlier than
+      // ~2013 (a 10yo campaigner). TB names are reused across generations, so
+      // name-only matching otherwise attaches a 2023 record to a same-named
+      // horse foaled decades earlier. Drop implausibly-old matches; keep
+      // unknown-foaling horses (can't disprove). The exact fix is name+foaling
+      // matching from the Equibase PP feed (which carries FoalingDate).
+      let targets = candidates.filter(
+        (h) => h.foalingYear == null || h.foalingYear >= RACING_PLAUSIBLE_MIN_FOAL_YEAR,
+      );
+      if (targets.length === 0) {
+        unmatched += 1;
+        continue;
+      }
+      const fy = typeof raw.foalingYear === 'number' ? raw.foalingYear : null;
+      if (fy != null) {
+        const byYear = targets.filter((h) => h.foalingYear === fy);
+        if (byYear.length > 0) targets = byYear;
+      }
+      const sex = typeof raw.sex === 'string' ? raw.sex : null;
+      if (sex) {
+        const bySex = targets.filter((h) => !h.sex || h.sex === sex);
+        if (bySex.length > 0) targets = bySex;
+      }
+
+      const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+      const data = {
+        starts: num(raw.starts),
+        wins: num(raw.wins),
+        places: num(raw.places),
+        shows: num(raw.shows),
+        earningsCents: raw.earningsCents != null && Number.isFinite(Number(raw.earningsCents))
+          ? BigInt(Math.round(Number(raw.earningsCents)))
+          : null,
+        bestSpeedFigure: num(raw.bestSpeedFigure),
+        racingUpdatedAt: new Date(),
+      };
+      for (const h of targets) {
+        await prisma.horse.update({ where: { id: h.id }, data });
+        updated += 1;
+      }
+      matched += 1;
+    }
+
+    return { received: body.length, matched, updated, unmatched };
   });
 }
 

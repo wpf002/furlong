@@ -18,7 +18,11 @@ services/ml/models/*.pkl
 services/ml/models/*.txt
 services/ml/models/*.joblib
 services/ml/models/*.json
-# data (raw catalogs/results are large + may be licensed — keep out of git)
+# data (raw catalogs/results/feeds are large + may be licensed — keep out of git)
+# Ignore everything under data/ except the tracked .gitkeep placeholders.
+data/*
+!data/catalogs/
+!data/results/
 data/catalogs/*
 data/results/*
 !data/catalogs/.gitkeep
