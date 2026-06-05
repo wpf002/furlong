@@ -5,8 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "tsx watch src/server.ts",
+    "worker": "tsx src/jobs/worker.ts",
+    "worker:watch": "tsx watch src/jobs/worker.ts",
     "build": "tsc",
     "start": "node dist/server.js",
+    "start:worker": "node dist/jobs/worker.js",
     "typecheck": "tsc --noEmit",
     "test": "vitest run"
   },
@@ -15,7 +18,9 @@
     "@fastify/multipart": "^10.0.0",
     "@furlong/db": "workspace:*",
     "@furlong/shared": "workspace:*",
+    "bullmq": "^5.78.0",
     "fastify": "^5.0.0",
+    "ioredis": "5.10.1",
     "jsonwebtoken": "^9.0.3",
     "undici": "^6.19.8",
     "zod": "^3.23.8"

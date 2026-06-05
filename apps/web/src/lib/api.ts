@@ -56,6 +56,14 @@ export interface SearchHip {
   valuation: Valuation | null;
   result: { priceCents: number | null; rna: boolean } | null;
   produce: { nFoals: number; medianFoalCents: number | null } | null;
+  racing: {
+    starts: number;
+    wins: number;
+    places: number | null;
+    shows: number | null;
+    earningsCents: number | null;
+    bestSpeedFigure: number | null;
+  } | null;
   oneLiner: string;
 }
 

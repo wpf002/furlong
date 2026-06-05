@@ -13,6 +13,18 @@ export const CatalogHipSchema = z.object({
   damsireName: z.string().nullable(),
   consignorName: z.string().nullable(),
   breederName: z.string().nullable(),
+  // Racing record (Phase 4, horses-in-training). Optional — only a licensed
+  // racing feed supplies these; yearling/breeding-stock catalogs omit them.
+  racing: z
+    .object({
+      starts: z.number().int().nonnegative().nullable().optional(),
+      wins: z.number().int().nonnegative().nullable().optional(),
+      places: z.number().int().nonnegative().nullable().optional(),
+      shows: z.number().int().nonnegative().nullable().optional(),
+      earningsCents: z.number().int().nonnegative().nullable().optional(),
+      bestSpeedFigure: z.number().int().nullable().optional(),
+    })
+    .optional(),
 });
 export type CatalogHip = z.infer<typeof CatalogHipSchema>;
 

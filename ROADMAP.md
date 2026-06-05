@@ -15,6 +15,24 @@ pass.
 
 ---
 
+## Build status (2026-06-04)
+
+- **Phase 0** ✅ complete.
+- **Phase 1** ✅ complete — real multi-house data (Keeneland Sept 1999–2025 + all Fasig-Tipton yearling sales).
+- **Phase 2** ✅ complete — trained quantile model (USD +33.7% / GNS +18.6% vs comparables), real hidden gems,
+  versioned registry, **2d automated jobs now built**: BullMQ worker (`apps/api/src/jobs`) with cron schedules for
+  discover / sale-soon / retrain. OFF by default (`JOBS_ENABLED`).
+- **Phase 3** ✅ complete — buyer profiles, shortlists, calendar, JWT auth, real Resend/Twilio delivery. All three
+  alert types now fire: `CATALOG_DROP` (on ingest), `SALE_SOON` (scheduled, sale within N hours),
+  `CRITERIA_MATCH` (post-valuation, budget + sire match).
+- **Phase 4** ✅ complete — Fasig-Tipton + Tattersalls/Goffs + multi-currency, cross-auction compare, broodmare
+  produce valuation, **and horses-in-training**: racing-record schema (license-pending), racing-age valuation path
+  (sire comparables × record multiplier), surfaced in search + cards. Auto-discovery/ingest pipeline (source
+  adapters, FT reference impl) is built and feature-flagged (`DISCOVERY_ENABLED`) — points at a licensed feed in prod.
+- **Phase 5** ⬜ not started (deferred): Railway deploy, monetization, legal hardening, signed data agreements.
+
+---
+
 ## Phase 0 — Foundation ✅ (complete)
 
 The scaffold. Done in the bootstrap.

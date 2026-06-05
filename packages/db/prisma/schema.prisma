@@ -38,6 +38,18 @@ model Horse {
   color          String?
   foalingYear    Int?
 
+  // Racing record (Phase 4, horses-in-training). NULL until a licensed feed
+  // (Equibase US / Timeform UK-IRE) populates them — the ROADMAP gates real
+  // racing-performance data behind a license, so these stay empty in dev and the
+  // racing-age valuation degrades to pedigree comparables when absent.
+  starts          Int?
+  wins            Int?
+  places          Int? // 2nd-place finishes
+  shows           Int? // 3rd-place finishes
+  earningsCents   BigInt? // career earnings, minor units of the horse's home currency
+  bestSpeedFigure Int? // best speed/class figure (Beyer / Timeform), license-pending
+  racingUpdatedAt DateTime?
+
   // self-referential pedigree
   sireId String?
   sire   Horse?  @relation("Sire", fields: [sireId], references: [id])

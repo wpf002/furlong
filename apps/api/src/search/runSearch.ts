@@ -25,6 +25,14 @@ export interface SearchHipOut {
   } | null;
   result: { priceCents: number | null; rna: boolean } | null;
   produce: { nFoals: number; medianFoalCents: number | null } | null;
+  racing: {
+    starts: number;
+    wins: number;
+    places: number | null;
+    shows: number | null;
+    earningsCents: number | null;
+    bestSpeedFigure: number | null;
+  } | null;
   oneLiner: string;
 }
 
@@ -129,6 +137,20 @@ export async function runSearch(query: SearchQuery & { limit?: number }): Promis
         ? { nFoals: feat.nFoals, medianFoalCents: feat.medianFoalCents ?? null }
         : null;
 
+    // Racing record (horses-in-training), surfaced when a licensed feed has set
+    // one. starts === null => no record held; show nothing rather than zeros.
+    const racing =
+      h.horse.starts != null
+        ? {
+            starts: h.horse.starts,
+            wins: h.horse.wins ?? 0,
+            places: h.horse.places ?? null,
+            shows: h.horse.shows ?? null,
+            earningsCents: centsToNumber(h.horse.earningsCents),
+            bestSpeedFigure: h.horse.bestSpeedFigure ?? null,
+          }
+        : null;
+
     // Always expose the model estimate when one exists (shown alongside the
     // actual price for settled sales).
     if (v) {
@@ -175,6 +197,7 @@ export async function runSearch(query: SearchQuery & { limit?: number }): Promis
       valuation,
       result,
       produce,
+      racing,
       oneLiner,
     };
   });

@@ -100,6 +100,20 @@ export function HipRow({
             </p>
           )}
 
+          {hip.racing && (
+            <p className="mt-1.5 text-xs text-ink-600">
+              <span className="text-ink/40">Race record</span> {hip.racing.starts}{' '}
+              {hip.racing.starts === 1 ? 'start' : 'starts'}, {hip.racing.wins}{' '}
+              {hip.racing.wins === 1 ? 'win' : 'wins'}
+              {hip.racing.earningsCents != null && hip.racing.earningsCents > 0 && (
+                <> · {formatMoney(hip.racing.earningsCents, currency)} earned</>
+              )}
+              {hip.racing.bestSpeedFigure != null && (
+                <> · best fig {hip.racing.bestSpeedFigure}</>
+              )}
+            </p>
+          )}
+
           {hip.oneLiner && (
             <p className="mt-3 border-t border-ink/5 pt-3 text-sm leading-relaxed text-ink-700">
               {hip.oneLiner}

@@ -69,6 +69,22 @@ export async function ingestCatalog(
 
     const normalizedName = normalizeEntityName(hip.name);
 
+    // Racing record (horses-in-training) — only present from a licensed feed;
+    // omit the keys entirely when absent so re-ingesting a pedigree-only catalog
+    // never wipes a record a feed previously set.
+    const r = hip.racing;
+    const racingData = r
+      ? {
+          starts: r.starts ?? null,
+          wins: r.wins ?? null,
+          places: r.places ?? null,
+          shows: r.shows ?? null,
+          earningsCents: r.earningsCents != null ? BigInt(r.earningsCents) : null,
+          bestSpeedFigure: r.bestSpeedFigure ?? null,
+          racingUpdatedAt: new Date(),
+        }
+      : {};
+
     const yearlingData = {
       name: hip.name?.trim() || null,
       normalizedName,
@@ -77,6 +93,7 @@ export async function ingestCatalog(
       foalingYear: hip.foalingYear,
       sireId,
       damId,
+      ...racingData,
     };
 
     const existing = await prisma.hip.findUnique({
