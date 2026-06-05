@@ -47,6 +47,12 @@ export const TOOLS = [
         maxPriceCents: { type: 'integer' },
         hiddenGemsOnly: { type: 'boolean' },
         soldOnly: { type: 'boolean', description: 'Only hips that have already sold.' },
+        sortBy: {
+          type: 'string',
+          enum: ['price_high', 'price_low', 'hidden_gem'],
+          description:
+            'Order before truncating — use price_high for "priciest/top", price_low for "cheapest", hidden_gem for best value. Default is by sale then hip number.',
+        },
         limit: { type: 'integer', description: 'Max rows to return (default 25, max 50).' },
       },
     },
@@ -98,8 +104,18 @@ async function listSales(input: Record<string, unknown>) {
     orderBy: [{ year: 'desc' }, { name: 'asc' }],
     include: { _count: { select: { hips: true } } },
   });
+  // Accurate aggregate counts over the FULL set (the sales list below is capped).
+  const byHouse: Record<string, number> = {};
+  const byCategory: Record<string, number> = {};
+  for (const s of sales) {
+    byHouse[s.auctionHouse] = (byHouse[s.auctionHouse] ?? 0) + 1;
+    byCategory[s.category] = (byCategory[s.category] ?? 0) + 1;
+  }
   return {
     count: sales.length,
+    byHouse,
+    byCategory,
+    note: sales.length > 80 ? 'sales[] is capped at 80; byHouse/byCategory are exact totals' : undefined,
     sales: sales.slice(0, 80).map((s) => ({
       id: s.id,
       house: s.auctionHouse,
@@ -163,6 +179,24 @@ async function searchHips(input: Record<string, unknown>) {
       if (minC != null && (hi == null || hi < minC)) return false;
       return true;
     });
+  }
+
+  // Sort BEFORE truncating, so "priciest/cheapest/best value" reflect the whole
+  // match set, not an arbitrary slice. Price = sold price if settled, else the
+  // predicted-band midpoint. (Cross-currency sorts compare raw minor units — fine
+  // for single-currency sires, approximate otherwise.)
+  const priceOf = (h: (typeof out)[number]): number => {
+    const sold =
+      h.result && !h.result.rna && h.result.priceCents != null ? n(h.result.priceCents) : null;
+    if (sold != null) return sold;
+    const v = h.valuations[0];
+    return v ? ((n(v.predPriceLowCents) ?? 0) + (n(v.predPriceHighCents) ?? 0)) / 2 : 0;
+  };
+  const sortBy = String(input.sortBy ?? '');
+  if (sortBy === 'price_high') out.sort((a, b) => priceOf(b) - priceOf(a));
+  else if (sortBy === 'price_low') out.sort((a, b) => priceOf(a) - priceOf(b));
+  else if (sortBy === 'hidden_gem') {
+    out.sort((a, b) => (b.valuations[0]?.hiddenGemScore ?? -1) - (a.valuations[0]?.hiddenGemScore ?? -1));
   }
 
   const total = out.length;
