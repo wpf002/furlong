@@ -125,7 +125,7 @@ export default function CalendarPage() {
                         </p>
                       </div>
                       <span className="tnum shrink-0 rounded-full bg-ink/5 px-3 py-1 text-xs font-medium text-ink-600">
-                        {s.hipCount} {s.hipCount === 1 ? 'hip' : 'hips'}
+                        {s.hipCount} {s.hipCount === 1 ? 'HIP' : "HIP's"}
                       </span>
                     </li>
                   );

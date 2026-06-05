@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { Sale, SearchHip } from '../lib/api';
 import { search } from '../lib/api';
 import { VALUATION_DISCLAIMER } from '../lib/format';
@@ -36,6 +36,17 @@ export function SearchExperience({
   const [text, setText] = useState('');
   const [gemsOnly, setGemsOnly] = useState(false);
 
+  // Scroll to the results after a user-initiated search (so Search Catalog /
+  // Best Value visibly jump to the list, which is below the fold).
+  const resultsRef = useRef<HTMLDivElement>(null);
+  const justSearched = useRef(false);
+  useEffect(() => {
+    if (!loading && hips !== null && justSearched.current) {
+      justSearched.current = false;
+      resultsRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }, [loading, hips]);
+
   // Restore the last search so returning from a hip page shows the same results.
   useEffect(() => {
     try {
@@ -70,10 +81,15 @@ export function SearchExperience({
   }, [hips, count, currency, activeSaleId, sort, text, gemsOnly]);
 
   async function handleSubmit({ query, sort: nextSort }: SearchSubmit) {
+    justSearched.current = true;
     setLoading(true);
     setError(null);
     setSort(nextSort);
     setActiveSaleId(query.saleId);
+    // A fresh search clears the prior result-list filters so old settings don't
+    // silently carry over.
+    setText('');
+    setGemsOnly(false);
     try {
       const res = await search(query);
       setHips(res.hips);
@@ -178,7 +194,7 @@ export function SearchExperience({
       )}
 
       {!loading && hips !== null && (
-        <section className="space-y-4">
+        <section ref={resultsRef} className="space-y-4">
           <div className="flex flex-col gap-3 border-b border-ink/10 pb-3 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="font-serif text-lg text-ink-900">
               <span className="tnum font-semibold">{count}</span>{' '}
@@ -211,7 +227,7 @@ export function SearchExperience({
 
           {hips.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-ink/15 bg-paper-50 px-4 py-14 text-center">
-              <p className="font-serif text-lg text-ink-700">No hips matched your criteria</p>
+              <p className="font-serif text-lg text-ink-700">No HIP&apos;s matched your criteria</p>
               <p className="mt-1.5 text-sm text-ink-500">
                 Try widening your budget or removing filters.
               </p>

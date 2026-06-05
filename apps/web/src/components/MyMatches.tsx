@@ -54,7 +54,7 @@ export function MyMatches({ saleId, sales }: { saleId: string; sales: Sale[] }) 
           <h2 className="font-serif text-lg text-ink-900">My Matches</h2>
           <p className="mt-0.5 text-sm text-ink-600">
             {user
-              ? 'Hips ranked for your saved budget and preferred sires.'
+              ? "HIP's ranked for your saved budget and preferred sires."
               : 'Sign in and set a profile to get a ranked shortlist tailored to you.'}
           </p>
         </div>

@@ -43,7 +43,7 @@ export function HipRow({
         <div className="flex shrink-0 items-start gap-4 sm:flex-col sm:items-center sm:justify-start sm:border-r sm:border-ink/10 sm:pr-5">
           <div className="flex flex-col items-center">
             <span className="text-[10px] font-medium uppercase tracking-widest text-ink-500">
-              Hip
+              HIP
             </span>
             <span className="tnum font-serif text-4xl font-semibold leading-none text-racing-800">
               {hip.hipNumber}
