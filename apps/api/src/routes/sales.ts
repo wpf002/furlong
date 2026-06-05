@@ -9,9 +9,14 @@ import { valueSaleByCategory } from '../valuation/dispatch.js';
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL ?? 'http://localhost:8000';
 
 export async function registerSaleRoutes(app: FastifyInstance) {
-  // List sales on the calendar.
+  // List sales. Includes hipCount so the search UI can skip catalog-less
+  // (calendar-only) sales.
   app.get('/sales', async () => {
-    return prisma.sale.findMany({ orderBy: [{ year: 'desc' }, { startDate: 'asc' }] });
+    const sales = await prisma.sale.findMany({
+      orderBy: [{ year: 'desc' }, { startDate: 'asc' }],
+      include: { _count: { select: { hips: true } } },
+    });
+    return sales.map(({ _count, ...s }) => ({ ...s, hipCount: _count.hips }));
   });
 
   // Hips for a sale, with horse + latest valuation.

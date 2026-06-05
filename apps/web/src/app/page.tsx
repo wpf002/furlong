@@ -9,7 +9,11 @@ export default async function Home() {
   let salesError: string | null = null;
 
   try {
-    sales = await getSales();
+    // Only sales with a loaded catalog are searchable; calendar-only shells
+    // (upcoming sales whose catalog hasn't dropped) are excluded here but still
+    // appear on the Calendar page.
+    const all = await getSales();
+    sales = all.filter((s) => (s.hipCount ?? 1) > 0);
   } catch (err) {
     salesError = err instanceof Error ? err.message : 'Unknown error';
   }
