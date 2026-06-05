@@ -26,7 +26,6 @@ export interface Sale {
   endDate: string | null;
   currency?: string;
   category?: SaleCategory;
-  hipCount?: number;
 }
 
 export interface Valuation {

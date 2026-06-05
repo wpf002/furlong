@@ -124,15 +124,9 @@ export default function CalendarPage() {
                           {date && <span>· {date}</span>}
                         </p>
                       </div>
-                      {s.hipCount > 0 ? (
-                        <span className="tnum shrink-0 rounded-full bg-ink/5 px-3 py-1 text-xs font-medium text-ink-600">
-                          {s.hipCount} {s.hipCount === 1 ? 'HIP' : "HIP's"}
-                        </span>
-                      ) : (
-                        <span className="shrink-0 rounded-full bg-ink/5 px-3 py-1 text-xs font-medium text-ink-500">
-                          Catalog pending
-                        </span>
-                      )}
+                      <span className="tnum shrink-0 rounded-full bg-ink/5 px-3 py-1 text-xs font-medium text-ink-600">
+                        {s.hipCount} {s.hipCount === 1 ? 'HIP' : "HIP's"}
+                      </span>
                     </li>
                   );
                 })}
