@@ -8,8 +8,37 @@ import { prisma } from '@furlong/db';
  * the dams of yearlings in the existing data, then value her against comparable
  * sold broodmares in the same produce tier. Deterministic comparables — no LLM.
  */
-const MODEL_VERSION = 'broodmare-comparables-1.0.0';
+const MODEL_VERSION = 'broodmare-comparables-1.1.0';
 const MIN_TIER = 8;
+
+const clamp = (n: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, n));
+
+interface MareRacing {
+  starts: number | null;
+  wins: number | null;
+  earningsCents: bigint | null;
+  bestSpeedFigure: number | null;
+}
+
+/**
+ * Premium from a mare's OWN race record. Produce record dominates a proven
+ * producer's value, but black-type race ability is a real, separable signal —
+ * and for a maiden mare (no produce yet) it's often the primary one. Deterministic
+ * and bounded: a graded-stakes earner lifts the produce band by up to ~50%, a
+ * minor winner barely moves it, an unraced/maiden mare returns 1.0 (unchanged).
+ */
+function mareRacingMultiplier(h: MareRacing): number {
+  const starts = h.starts ?? 0;
+  if (starts <= 0) return 1.0;
+  const earnUsd = Number(h.earningsCents ?? 0n) / 100;
+  // Log-scaled earnings premium: ~$10k -> 0, ~$1M -> +0.4.
+  const earnBoost = earnUsd > 10_000
+    ? clamp(Math.log10(earnUsd / 10_000) / 2, 0, 1) * 0.4
+    : 0;
+  const fig = h.bestSpeedFigure ?? 0;
+  const figBoost = fig > 0 ? clamp((fig - 80) / 40, 0, 1) * 0.15 : 0;
+  return 1 + earnBoost + figBoost;
+}
 
 function percentile(sorted: number[], p: number): number {
   if (sorted.length === 0) return 0;
@@ -117,7 +146,18 @@ export async function valuateBroodmareSale(saleId: string): Promise<BroodmareVal
 
   const hips = await prisma.hip.findMany({
     where: { saleId },
-    include: { horse: { select: { normalizedName: true, sex: true } } },
+    include: {
+      horse: {
+        select: {
+          normalizedName: true,
+          sex: true,
+          starts: true,
+          wins: true,
+          earningsCents: true,
+          bestSpeedFigure: true,
+        },
+      },
+    },
   });
 
   let valued = 0;
@@ -138,23 +178,43 @@ export async function valuateBroodmareSale(saleId: string): Promise<BroodmareVal
     }
     if (prices.length === 0) prices = noProduce.length ? noProduce : [0];
 
+    // Apply the mare's own race-record premium to the produce-based band.
+    const mult = mareRacingMultiplier(hip.horse);
+    const hasRecord = (hip.horse.starts ?? 0) > 0;
     const b = band(prices);
-    const confidence = Math.max(0.1, Math.min(1, (prod ? 0.5 : 0.25) * Math.min(1, b.n / 30) + 0.15));
+    const low = r100(b.low * mult);
+    const mid = r100(b.mid * mult);
+    const high = r100(b.high * mult);
+
+    // A real race record adds independent evidence -> a little more confidence,
+    // and matters most for maiden mares whose produce signal is absent.
+    const base = (prod ? 0.5 : 0.25) * Math.min(1, b.n / 30) + 0.15;
+    const confidence = clamp(base + (hasRecord ? 0.1 : 0), 0.1, 1);
 
     await prisma.valuation.create({
       data: {
         hipId: hip.id,
-        estValueLowCents: BigInt(b.low),
-        estValueHighCents: BigInt(b.high),
-        predPriceLowCents: BigInt(b.low),
-        predPriceHighCents: BigInt(b.high),
+        estValueLowCents: BigInt(low),
+        estValueHighCents: BigInt(high),
+        predPriceLowCents: BigInt(low),
+        predPriceHighCents: BigInt(high),
         confidence,
         hiddenGemScore: null,
         limitedComparables: limited,
         modelVersion: MODEL_VERSION,
-        features: prod
-          ? { nFoals: prod.nFoals, medianFoalCents: prod.medianFoalCents }
-          : { nFoals: 0 },
+        features: {
+          nFoals: prod?.nFoals ?? 0,
+          ...(prod ? { medianFoalCents: prod.medianFoalCents } : {}),
+          ...(hasRecord
+            ? {
+                ownStarts: hip.horse.starts,
+                ownWins: hip.horse.wins,
+                ownEarningsCents: Number(hip.horse.earningsCents ?? 0n),
+                ownBestSpeedFigure: hip.horse.bestSpeedFigure,
+                racingMultiplier: Number(mult.toFixed(3)),
+              }
+            : {}),
+        },
       },
     });
     valued += 1;
