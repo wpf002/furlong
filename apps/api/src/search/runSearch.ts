@@ -33,6 +33,7 @@ export interface SearchHipOut {
     earningsCents: number | null;
     bestSpeedFigure: number | null;
   } | null;
+  breeze: string | null;
   oneLiner: string;
 }
 
@@ -198,6 +199,7 @@ export async function runSearch(query: SearchQuery & { limit?: number }): Promis
       result,
       produce,
       racing,
+      breeze: h.breezeTime ?? null,
       oneLiner,
     };
   });

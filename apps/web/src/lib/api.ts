@@ -64,6 +64,7 @@ export interface SearchHip {
     earningsCents: number | null;
     bestSpeedFigure: number | null;
   } | null;
+  breeze: string | null;
   oneLiner: string;
 }
 

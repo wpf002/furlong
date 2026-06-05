@@ -100,6 +100,13 @@ export function HipRow({
             </p>
           )}
 
+          {hip.breeze && (
+            <p className="mt-1.5 text-xs text-ink-600">
+              <span className="text-ink/40">Breeze</span>{' '}
+              <span className="tnum font-medium text-racing-800">{hip.breeze}</span>
+            </p>
+          )}
+
           {hip.racing && (
             <p className="mt-1.5 text-xs text-ink-600">
               <span className="text-ink/40">Race record</span> {hip.racing.starts}{' '}

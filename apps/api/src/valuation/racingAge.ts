@@ -14,8 +14,21 @@ import { prisma } from '@furlong/db';
  *
  * Deterministic comparables + a transparent multiplier. No LLM in the number.
  */
-const MODEL_VERSION = 'racing-age-comparables-1.0.0';
+const MODEL_VERSION = 'racing-age-comparables-1.1.0';
 const MIN_SIRE = 6;
+
+/**
+ * Breeze (under-tack) premium, relative to the sale's median work. A 2YO that
+ * breezes faster than its peers commands a premium — for fresh juveniles with no
+ * race record yet, the work IS the signal. `breezeSeconds` is normalized to
+ * seconds-per-furlong (lower = faster), so a hip below the sale median lifts the
+ * band and a slow work discounts it. Bounded; no breeze -> 1.0 (unchanged).
+ */
+function breezeMultiplier(breezeSeconds: number | null, saleMedian: number | null): number {
+  if (!breezeSeconds || !saleMedian || saleMedian <= 0) return 1.0;
+  const faster = (saleMedian - breezeSeconds) / saleMedian; // + when faster than median
+  return Math.max(0.8, Math.min(1.3, 1 + faster * 3));
+}
 
 function percentile(sorted: number[], p: number): number {
   if (sorted.length === 0) return 0;
@@ -109,6 +122,13 @@ export async function valuateRacingAgeSale(saleId: string): Promise<RacingAgeVal
     },
   });
 
+  // Sale-wide median breeze (seconds/furlong) — the reference for the premium.
+  const breezes = hips
+    .map((h) => h.breezeSeconds)
+    .filter((b): b is number => b != null && b > 0)
+    .sort((a, b) => a - b);
+  const saleBreezeMedian = breezes.length ? percentile(breezes, 0.5) : null;
+
   let valued = 0;
   for (const hip of hips) {
     const sireNorm = hip.horse.sire?.normalizedName ?? null;
@@ -123,15 +143,18 @@ export async function valuateRacingAgeSale(saleId: string): Promise<RacingAgeVal
     if (prices.length === 0) prices = [0];
 
     const mult = racingMultiplier(hip.horse);
+    const breezeMult = breezeMultiplier(hip.breezeSeconds, saleBreezeMedian);
     const hasRecord = (hip.horse.starts ?? 0) > 0;
+    const hasBreeze = hip.breezeSeconds != null;
+    const combined = mult * breezeMult;
 
-    const low = r100(percentile(prices, 0.25) * mult);
-    const mid = r100(percentile(prices, 0.5) * mult);
-    const high = r100(percentile(prices, 0.75) * mult);
+    const low = r100(percentile(prices, 0.25) * combined);
+    const mid = r100(percentile(prices, 0.5) * combined);
+    const high = r100(percentile(prices, 0.75) * combined);
 
-    // More comps + a real racing record => more confidence; still capped (these
-    // markets are wide). Maidens with thin sire data land low/honest.
-    const base = hasRecord ? 0.45 : 0.3;
+    // More comps + a real record or a timed work => more confidence; still
+    // capped (these markets are wide). Maidens with thin sire data land low.
+    const base = hasRecord || hasBreeze ? 0.45 : 0.3;
     const confidence = clamp(base * Math.min(1, prices.length / 30) + 0.15, 0.1, 0.95);
 
     await prisma.valuation.create({
@@ -148,6 +171,8 @@ export async function valuateRacingAgeSale(saleId: string): Promise<RacingAgeVal
         features: {
           sireComps: prices.length,
           racingMultiplier: Number(mult.toFixed(3)),
+          breezeMultiplier: Number(breezeMult.toFixed(3)),
+          breezeSeconds: hip.breezeSeconds ?? null,
           starts: hip.horse.starts ?? 0,
           wins: hip.horse.wins ?? 0,
           bestSpeedFigure: hip.horse.bestSpeedFigure ?? null,

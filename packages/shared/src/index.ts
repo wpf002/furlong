@@ -13,6 +13,10 @@ export const CatalogHipSchema = z.object({
   damsireName: z.string().nullable(),
   consignorName: z.string().nullable(),
   breederName: z.string().nullable(),
+  // Under-tack breeze (2YO-in-training sales). breezeSeconds is normalized to
+  // seconds-per-furlong; breezeTime is the raw published string for display.
+  breezeTime: z.string().nullable().optional(),
+  breezeSeconds: z.number().positive().nullable().optional(),
   // Racing record (Phase 4, horses-in-training). Optional — only a licensed
   // racing feed supplies these; yearling/breeding-stock catalogs omit them.
   racing: z

@@ -113,6 +113,8 @@ export async function ingestCatalog(
           sessionNumber: hip.sessionNumber,
           consignorId,
           breederId,
+          breezeTime: hip.breezeTime ?? null,
+          breezeSeconds: hip.breezeSeconds ?? null,
         },
       });
       updated += 1;
@@ -129,6 +131,8 @@ export async function ingestCatalog(
           horseId: yearling.id,
           consignorId,
           breederId,
+          breezeTime: hip.breezeTime ?? null,
+          breezeSeconds: hip.breezeSeconds ?? null,
         },
       });
       created += 1;

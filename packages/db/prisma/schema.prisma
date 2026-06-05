@@ -117,6 +117,13 @@ model Hip {
   hipNumber     Int
   sessionNumber Int?
 
+  // Under-tack ("breeze") work for 2YO-in-training sales (e.g. OBS). breezeTime
+  // is the raw published time for display (e.g. ":10 1/5"); breezeSeconds is
+  // normalized to seconds-per-furlong (lower = faster) so works at 1/8 vs 1/4
+  // mile are comparable and usable as a valuation signal. NULL for non-2YO sales.
+  breezeTime    String?
+  breezeSeconds Float?
+
   horseId String
   horse   Horse  @relation(fields: [horseId], references: [id])
 
