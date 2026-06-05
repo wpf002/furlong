@@ -308,3 +308,26 @@ export interface NotificationSettingsInput {
   notifyEmail?: boolean;
   notifySms?: boolean;
 }
+
+// ---------------------------------------------------------------------------
+// Secretariat — the conversational assistant. Stateless: send the short
+// conversation each turn; the server runs the tool loop and returns a reply.
+// ---------------------------------------------------------------------------
+
+export interface AssistantMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface AssistantResponse {
+  reply: string;
+  toolsUsed: string[];
+  configured?: boolean;
+}
+
+export function askSecretariat(messages: AssistantMessage[]): Promise<AssistantResponse> {
+  return request<AssistantResponse>('/assistant', {
+    method: 'POST',
+    body: JSON.stringify({ messages }),
+  });
+}
