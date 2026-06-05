@@ -21,6 +21,7 @@ export async function registerSaleRoutes(app: FastifyInstance) {
       include: {
         horse: { include: { sire: true, dam: { include: { sire: true } } } },
         consignor: true,
+        breeder: true,
         result: true,
         valuations: { orderBy: { createdAt: 'desc' }, take: 1 },
       },

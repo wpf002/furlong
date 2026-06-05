@@ -169,15 +169,11 @@ export async function runSearch(query: SearchQuery & { limit?: number }): Promis
     if (soldCents != null) {
       oneLiner = `${subject} — sold for ${formatMoney(soldCents, currency)}.`;
     } else if (h.result?.rna) {
-      oneLiner = `${subject} — not sold (RNA).`;
+      oneLiner = `${subject} — RNA.`;
     } else if (v) {
-      const note = budgetHighCents != null ? 'within your budget' : 'based on historical comparables';
-      const caveat = v.limitedComparables
-        ? ' Limited comparable data — treat this estimate as directional.'
-        : '';
       oneLiner =
-        `${subject} — predicted ` +
-        `${formatMoney(v.predPriceLowCents, currency)}–${formatMoney(v.predPriceHighCents, currency)}; ${note}.${caveat}`;
+        `${subject} — est. ` +
+        `${formatMoney(v.predPriceLowCents, currency)}–${formatMoney(v.predPriceHighCents, currency)}.`;
     } else {
       oneLiner = `${subject} — not yet valued.`;
     }

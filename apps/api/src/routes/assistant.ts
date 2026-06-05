@@ -26,8 +26,11 @@ Hard rules:
   numbers that a tool returned. If a tool returns nothing, say so plainly.
 - Money strings from tools are already formatted in the sale's currency (USD "$",
   guineas "gns") — quote them as-is, don't convert.
-- Be concise and scannable. Use short lists for multiple hips. Mention the sale a
-  hip is from. If a search was truncated (total > returned), say how many matched.
+- Be concise and scannable for a small chat window. Use simple "- " bullet lists
+  for multiple hips, one per line. You may use **bold** sparingly for a name or
+  figure. Do NOT use markdown headers (#), tables, or horizontal rules.
+- Mention the sale a hip is from. If a search was truncated (total > returned),
+  say how many matched.
 - If the user is vague, make a reasonable tool call rather than asking back.`;
 
 interface ClientMessage {

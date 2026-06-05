@@ -3,6 +3,7 @@ import { getSaleHips, getSales, type DetailHip, type Valuation } from '../../../
 import { sexColorLabel, VALUATION_DISCLAIMER } from '../../../lib/format';
 import { ValuationBands } from '../../../components/ValuationBands';
 import { SaveToShortlist } from '../../../components/SaveToShortlist';
+import { StarIcon } from '../../../components/icons';
 import { formatMoney } from '@furlong/shared';
 
 export const dynamic = 'force-dynamic';
@@ -33,7 +34,7 @@ export default async function HipDetailPage({
       href="/"
       className="text-sm font-medium text-ink-500 transition hover:text-racing-700"
     >
-      ← Back to search
+      ← Back to Search
     </Link>
   );
 
@@ -114,8 +115,9 @@ export default async function HipDetailPage({
             </span>
           )}
           {isGem && (
-            <span className="rounded-full bg-gradient-to-r from-brass-400 to-brass-600 px-2.5 py-0.5 text-[10px] font-semibold uppercase tracking-widest text-white">
-              ★ Hidden Gem
+            <span className="inline-flex items-center gap-1 rounded-full bg-brass-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brass-700 ring-1 ring-brass-400/40">
+              <StarIcon className="h-2.5 w-2.5" />
+              Hidden Gem
             </span>
           )}
         </div>
@@ -134,7 +136,7 @@ export default async function HipDetailPage({
       <div className="rule-brass my-7" />
 
       <section className="rounded-2xl border border-ink/10 bg-paper-50 p-6 shadow-card">
-        <h2 className="font-serif text-lg text-ink-900">Pedigree &amp; connections</h2>
+        <h2 className="font-serif text-lg text-ink-900">Pedigree &amp; Connections</h2>
         <dl className="mt-4 grid grid-cols-1 gap-x-8 gap-y-4 sm:grid-cols-2">
           <Field label="Sire" value={horse.sire?.name} />
           <Field label="Dam" value={horse.dam?.name} />
@@ -144,7 +146,7 @@ export default async function HipDetailPage({
             value={horse.foalingYear != null ? String(horse.foalingYear) : null}
           />
           <Field label="Consignor" value={hip.consignor?.name} />
-          <Field label="Breeder" value={horse.breederName} />
+          <Field label="Breeder" value={hip.breeder?.name} />
         </dl>
         {sold != null && (
           <p className="mt-5 border-t border-ink/10 pt-4 text-sm text-ink-700">
@@ -161,8 +163,7 @@ export default async function HipDetailPage({
         <h2 className="mb-4 font-serif text-lg text-ink-900">Valuation</h2>
         <ValuationBands valuation={latest} currency={currency} showDisclaimer={false} />
         <p className="mt-4 border-t border-ink/10 pt-4 text-xs italic leading-relaxed text-ink-500">
-          {VALUATION_DISCLAIMER} Bands reflect comparable historical sales; treat them as a
-          guide, not a guarantee.
+          {VALUATION_DISCLAIMER}
         </p>
       </section>
     </main>

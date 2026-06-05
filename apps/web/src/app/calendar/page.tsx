@@ -72,7 +72,7 @@ export default function CalendarPage() {
         </h1>
         <div className="rule-brass my-5 max-w-xs" />
         <p className="text-sm leading-relaxed text-ink-600">
-          Yearling sales by year, with catalog sizes. Upcoming sales are flagged.
+          Every sale across all houses, by year, with catalog sizes. Upcoming sales are flagged.
         </p>
       </header>
 

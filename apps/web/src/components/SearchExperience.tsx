@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { Sale, SearchHip } from '../lib/api';
 import { search } from '../lib/api';
 import { VALUATION_DISCLAIMER } from '../lib/format';
@@ -35,6 +35,39 @@ export function SearchExperience({
   // Client-side filters over the returned list.
   const [text, setText] = useState('');
   const [gemsOnly, setGemsOnly] = useState(false);
+
+  // Restore the last search so returning from a hip page shows the same results.
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem('furlong:lastSearch');
+      if (!raw) return;
+      const s = JSON.parse(raw);
+      if (Array.isArray(s.hips)) {
+        setHips(s.hips);
+        setCount(s.count ?? s.hips.length);
+        setCurrency(s.currency ?? 'USD');
+        setActiveSaleId(s.activeSaleId ?? '');
+        setSort(s.sort ?? 'rank');
+        setText(s.text ?? '');
+        setGemsOnly(!!s.gemsOnly);
+      }
+    } catch {
+      /* ignore */
+    }
+  }, []);
+
+  // Persist the current result set + filters as it changes.
+  useEffect(() => {
+    if (hips === null) return;
+    try {
+      sessionStorage.setItem(
+        'furlong:lastSearch',
+        JSON.stringify({ hips, count, currency, activeSaleId, sort, text, gemsOnly }),
+      );
+    } catch {
+      /* ignore */
+    }
+  }, [hips, count, currency, activeSaleId, sort, text, gemsOnly]);
 
   async function handleSubmit({ query, sort: nextSort }: SearchSubmit) {
     setLoading(true);
@@ -151,7 +184,7 @@ export function SearchExperience({
               <span className="tnum font-semibold">{count}</span>{' '}
               <span className="text-ink-600">{count === 1 ? 'match' : 'matches'}</span>
               {sort === 'value' && (
-                <span className="text-sm text-brass-600"> · best value</span>
+                <span className="text-sm text-brass-600"> · Best Value</span>
               )}
               {visible.length !== count && (
                 <span className="text-sm text-ink-500"> · {visible.length} shown</span>
@@ -165,7 +198,7 @@ export function SearchExperience({
                   onChange={(e) => setGemsOnly(e.target.checked)}
                   className="h-3.5 w-3.5 rounded border-ink/30 text-brass-500 focus:ring-brass-400/40"
                 />
-                Hidden gems
+                Hidden Gems
               </label>
               <input
                 value={text}

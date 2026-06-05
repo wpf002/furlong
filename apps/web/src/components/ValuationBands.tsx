@@ -1,7 +1,6 @@
 import { formatMoney } from '@furlong/shared';
 import type { Valuation } from '../lib/api';
 import { VALUATION_DISCLAIMER, confidenceLabel } from '../lib/format';
-import { Badge } from './Badge';
 
 // --------------------------------------------------------------------------
 // Range-bar visualization.
@@ -44,9 +43,9 @@ function RangeBar({
       <dt className="text-[11px] font-medium uppercase tracking-wide text-ink-500">
         {band.label}
       </dt>
-      <dd className="tnum text-sm font-semibold text-ink-900">
-        {formatMoney(band.low, currency)}{' '}
-        <span className="font-normal text-ink-500">–</span>{' '}
+      <dd className="tnum whitespace-nowrap text-sm font-semibold text-ink-900">
+        {formatMoney(band.low, currency)}
+        <span className="px-1 font-normal text-ink-500">–</span>
         {formatMoney(band.high, currency)}
       </dd>
       <div className="col-start-2 row-start-2">
@@ -86,7 +85,6 @@ export function ValuationBands({
   }
 
   const conf = confidenceLabel(valuation.confidence);
-  const confTone = conf === 'High' ? 'green' : conf === 'Medium' ? 'amber' : 'red';
   const isGem =
     valuation.hiddenGemScore != null && valuation.hiddenGemScore > 0;
 
@@ -117,15 +115,6 @@ export function ValuationBands({
 
   return (
     <div className={compact ? 'space-y-2.5' : 'space-y-3'}>
-      {valuation.limitedComparables && (
-        <div className="flex items-start gap-2 rounded-lg border border-amber-300/70 bg-amber-50 px-3 py-2 text-xs font-medium text-amber-900">
-          <span aria-hidden className="mt-px text-amber-600">
-            ⚠
-          </span>
-          <span>Limited comparables — treat this estimate as low confidence.</span>
-        </div>
-      )}
-
       <dl className="space-y-3">
         {bands.map((band) => (
           <RangeBar
@@ -151,10 +140,6 @@ export function ValuationBands({
           />
           {conf} confidence
         </span>
-        <Badge tone={confTone === 'green' ? 'green' : confTone === 'amber' ? 'amber' : 'red'}>
-          {conf}
-        </Badge>
-        {isGem && <Badge tone="brass">★ Hidden gem</Badge>}
       </div>
 
       {showDisclaimer && (

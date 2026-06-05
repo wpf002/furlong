@@ -89,6 +89,7 @@ export interface DetailHip {
     dam?: { name: string | null; sire?: { name: string | null } | null } | null;
   };
   consignor?: { name: string | null } | null;
+  breeder?: { name: string | null } | null;
   result?: {
     priceCents?: number | null;
     status?: string | null;

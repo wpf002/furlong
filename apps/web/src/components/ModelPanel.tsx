@@ -50,11 +50,6 @@ export function ModelPanel({ data }: { data: ModelMetrics | null }) {
           </div>
         ))}
       </div>
-      <p className="mt-2 text-[11px] text-ink-500">
-        Model <span className="font-mono">{data.modelVersion}</span> — a gradient-boosted
-        quantile model retrained as new sale results arrive. The more sales it sees, the
-        sharper the estimates.
-      </p>
     </section>
   );
 }

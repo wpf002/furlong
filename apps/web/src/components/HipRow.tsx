@@ -4,6 +4,7 @@ import type { SearchHip } from '../lib/api';
 import { sexColorLabel } from '../lib/format';
 import { ValuationBands } from './ValuationBands';
 import { SaveToShortlist } from './SaveToShortlist';
+import { StarIcon } from './icons';
 
 export function HipRow({
   hip,
@@ -27,23 +28,12 @@ export function HipRow({
 
   return (
     <div
-      className={`group relative overflow-hidden rounded-2xl border bg-paper-50 shadow-card transition duration-200 hover:-translate-y-0.5 hover:shadow-cardHover ${
+      className={`group relative rounded-2xl border bg-paper-50 shadow-card transition duration-200 hover:-translate-y-0.5 hover:shadow-cardHover ${
         isGem
           ? 'border-brass-400/60 ring-1 ring-brass-400/30'
           : 'border-ink/10 hover:border-ink/20'
       }`}
     >
-      {isGem && (
-        <span className="pointer-events-none absolute right-0 top-0 rounded-bl-xl bg-gradient-to-r from-brass-400 to-brass-600 px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-white shadow-sm">
-          ★ Hidden Gem
-        </span>
-      )}
-
-      {/* Save control sits outside the Link so clicks don't navigate. */}
-      <div className={`absolute right-3 z-10 ${isGem ? 'top-10' : 'top-3'}`}>
-        <SaveToShortlist hipId={hip.id} />
-      </div>
-
       <Link
         href={`/hips/${hip.id}?sale=${encodeURIComponent(saleId)}`}
         className="block"
@@ -68,13 +58,21 @@ export function HipRow({
 
         {/* Headline + metadata */}
         <div className="min-w-0 flex-1">
-          <h3 className="font-serif text-xl font-medium leading-snug text-ink-900">
-            <span>{sire}</span>
-            <span className="mx-1.5 text-brass-500" aria-label="out of">
-              ×
-            </span>
-            <span className="italic">{dam}</span>
-          </h3>
+          <div className="flex items-start justify-between gap-3">
+            <h3 className="font-serif text-xl font-medium leading-snug text-ink-900">
+              <span>{sire}</span>
+              <span className="mx-1.5 text-brass-500" aria-label="out of">
+                ×
+              </span>
+              <span className="italic">{dam}</span>
+            </h3>
+            {isGem && (
+              <span className="mt-1 inline-flex shrink-0 items-center gap-1 rounded-full bg-brass-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brass-700 ring-1 ring-brass-400/40">
+                <StarIcon className="h-2.5 w-2.5" />
+                Hidden Gem
+              </span>
+            )}
+          </div>
           {horse.name && (
             <p className="mt-0.5 text-sm font-medium text-ink-600">{horse.name}</p>
           )}
@@ -128,8 +126,12 @@ export function HipRow({
           )}
         </div>
 
-          {/* Actual price (settled sales) and/or the model estimate */}
-          <div className="w-full shrink-0 sm:w-72 sm:border-l sm:border-ink/10 sm:pl-5">
+          {/* Actual price (settled sales) and/or the model estimate. Save sits
+              at the top of this column so it never overlays the figures. */}
+          <div className="flex w-full shrink-0 flex-col gap-2.5 sm:w-72 sm:border-l sm:border-ink/10 sm:pl-5">
+            <div className="flex justify-end">
+              <SaveToShortlist hipId={hip.id} />
+            </div>
             {soldCents != null ? (
               <div>
                 <p className="text-[11px] font-medium uppercase tracking-wide text-ink-500">
@@ -139,8 +141,8 @@ export function HipRow({
                   {formatMoney(soldCents, currency)}
                 </p>
                 {hip.valuation && (
-                  <p className="mt-1.5 text-xs text-ink-500">
-                    Model est.{' '}
+                  <p className="mt-1.5 whitespace-nowrap text-xs text-ink-500">
+                    Est.{' '}
                     <span className="tnum">
                       {formatMoney(hip.valuation.predPriceLowCents, currency)}–
                       {formatMoney(hip.valuation.predPriceHighCents, currency)}

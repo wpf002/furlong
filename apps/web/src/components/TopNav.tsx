@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { BuyerAlert } from '../lib/api';
 import { useUser } from '../lib/useUser';
+import { BellIcon } from './icons';
 
 const NAV = [
   { href: '/', label: 'Search' },
@@ -120,9 +121,7 @@ function AlertsBell() {
         aria-label={`Alerts${unread ? `, ${unread} unread` : ''}`}
         className="relative flex h-9 w-9 items-center justify-center rounded-full text-ink-600 transition hover:bg-ink/5 hover:text-ink-900"
       >
-        <span aria-hidden className="text-lg leading-none">
-          🔔
-        </span>
+        <BellIcon className="h-5 w-5" />
         {unread > 0 && (
           <span className="absolute -right-0.5 -top-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-brass-600 px-1 text-[10px] font-semibold text-white">
             {unread > 9 ? '9+' : unread}
@@ -262,7 +261,7 @@ function AuthControl() {
         onClick={() => setOpen((v) => !v)}
         className="rounded-lg bg-racing-800 px-3.5 py-2 text-sm font-semibold text-paper-50 shadow-sm transition hover:bg-racing-700"
       >
-        Sign in
+        Sign In
       </button>
       {open && (
         <form

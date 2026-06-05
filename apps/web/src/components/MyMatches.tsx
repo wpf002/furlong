@@ -51,7 +51,7 @@ export function MyMatches({ saleId, sales }: { saleId: string; sales: Sale[] }) 
     <section className="rounded-2xl border border-brass-400/40 bg-brass-50/40 p-5">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="font-serif text-lg text-ink-900">My matches</h2>
+          <h2 className="font-serif text-lg text-ink-900">My Matches</h2>
           <p className="mt-0.5 text-sm text-ink-600">
             {user
               ? 'Hips ranked for your saved budget and preferred sires.'
@@ -64,7 +64,7 @@ export function MyMatches({ saleId, sales }: { saleId: string; sales: Sale[] }) 
           disabled={!user || !saleId || loading}
           className="shrink-0 whitespace-nowrap rounded-lg border border-brass-400/60 bg-brass-50 px-4 py-2.5 text-sm font-semibold text-brass-700 shadow-sm transition hover:bg-brass-100 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {loading ? 'Finding matches…' : 'Show my matches'}
+          {loading ? 'Finding matches…' : 'Show My Matches'}
         </button>
       </div>
 

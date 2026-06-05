@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ShortlistSummary } from '../lib/api';
 import { isNotSignedIn, useUser } from '../lib/useUser';
+import { BookmarkIcon } from './icons';
 
 /**
  * Save button + popover that lets a signed-in buyer add a hip to an existing
@@ -107,10 +108,23 @@ export function SaveToShortlist({
   if (!ready) return null;
 
   return (
-    <div ref={wrapRef} className="relative inline-block">
-      <button type="button" onClick={toggle} className={base}>
-        <span aria-hidden>{savedTo ? '★' : '☆'}</span>
-        {savedTo ? `Saved` : 'Save'}
+    // Stop clicks bubbling to a parent <Link> (this control is rendered inside
+    // the result card's link).
+    <div
+      ref={wrapRef}
+      className="relative inline-block"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <button
+        type="button"
+        onClick={(e) => {
+          e.preventDefault();
+          toggle();
+        }}
+        className={base}
+      >
+        <BookmarkIcon filled={!!savedTo} className="h-3.5 w-3.5" />
+        {savedTo ? 'Saved' : 'Save'}
       </button>
 
       {open && (

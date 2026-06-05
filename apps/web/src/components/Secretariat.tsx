@@ -1,7 +1,59 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { askSecretariat, type AssistantMessage } from '../lib/api';
+import { HorseIcon, CloseIcon, MicIcon } from './icons';
+
+// Minimal, dependency-free renderer for the assistant's light markdown: '- '
+// bullet lists, **bold**, and paragraph breaks. Keeps replies human-readable
+// without dumping raw asterisks.
+function inline(text: string): ReactNode[] {
+  return text.split(/(\*\*[^*]+\*\*)/g).map((part, i) =>
+    part.startsWith('**') && part.endsWith('**') ? (
+      <strong key={i} className="font-semibold text-ink-900">
+        {part.slice(2, -2)}
+      </strong>
+    ) : (
+      <span key={i}>{part}</span>
+    ),
+  );
+}
+
+function RichText({ text }: { text: string }) {
+  const lines = text.replace(/\r/g, '').split('\n');
+  const blocks: ReactNode[] = [];
+  let bullets: string[] = [];
+  const flush = () => {
+    if (bullets.length) {
+      blocks.push(
+        <ul key={`u${blocks.length}`} className="list-disc space-y-0.5 pl-4">
+          {bullets.map((b, i) => (
+            <li key={i}>{inline(b)}</li>
+          ))}
+        </ul>,
+      );
+      bullets = [];
+    }
+  };
+  for (const raw of lines) {
+    const line = raw.trimEnd();
+    const m = line.match(/^\s*[-•*]\s+(.*)$/);
+    if (m) {
+      bullets.push(m[1]!);
+    } else if (line.trim() === '') {
+      flush();
+    } else {
+      flush();
+      blocks.push(
+        <p key={`p${blocks.length}`} className="whitespace-pre-wrap">
+          {inline(line)}
+        </p>,
+      );
+    }
+  }
+  flush();
+  return <div className="space-y-1.5">{blocks}</div>;
+}
 
 const GREETING =
   "Hi, I'm Secretariat. Ask me about your catalogs — \"find all colts by Into Mischief\", " +
@@ -108,9 +160,7 @@ export function Secretariat() {
           aria-label="Open Secretariat assistant"
           className="fixed bottom-5 right-5 z-50 flex items-center gap-2 rounded-full bg-racing-800 px-4 py-3 text-sm font-medium text-white shadow-cardHover transition hover:bg-racing-700"
         >
-          <span aria-hidden className="text-lg">
-            🐎
-          </span>
+          <HorseIcon className="h-5 w-5" />
           Ask Secretariat
         </button>
       )}
@@ -120,9 +170,7 @@ export function Secretariat() {
         <div className="fixed bottom-5 right-5 z-50 flex h-[32rem] w-[22rem] max-w-[calc(100vw-2.5rem)] flex-col overflow-hidden rounded-2xl border border-ink/10 bg-paper-50 shadow-cardHover">
           <header className="flex items-center justify-between bg-racing-800 px-4 py-3 text-white">
             <div className="flex items-center gap-2">
-              <span aria-hidden className="text-lg">
-                🐎
-              </span>
+              <HorseIcon className="h-5 w-5" />
               <span className="font-serif text-base font-medium">Secretariat</span>
             </div>
             <button
@@ -130,7 +178,7 @@ export function Secretariat() {
               aria-label="Close"
               className="rounded p-1 text-white/70 transition hover:bg-white/10 hover:text-white"
             >
-              ✕
+              <CloseIcon className="h-4 w-4" />
             </button>
           </header>
 
@@ -153,7 +201,7 @@ export function Secretariat() {
             )}
             {messages.map((m, i) => (
               <Bubble key={i} role={m.role}>
-                {m.content}
+                {m.role === 'assistant' ? <RichText text={m.content} /> : m.content}
               </Bubble>
             ))}
             {loading && (
@@ -176,7 +224,7 @@ export function Secretariat() {
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder={listening ? 'Listening…' : 'Ask Secretariat about your catalogs…'}
+              placeholder={listening ? 'Listening…' : 'Ask about your catalogs…'}
               className="min-w-0 flex-1 rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm outline-none focus:border-brass-400"
             />
             {micOk && (
@@ -192,7 +240,7 @@ export function Secretariat() {
                     : 'border border-ink/15 bg-white text-ink-600 hover:border-brass-400'
                 }`}
               >
-                🎤
+                <MicIcon className="h-4 w-4" />
               </button>
             )}
             <button
