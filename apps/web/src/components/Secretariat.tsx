@@ -20,11 +20,65 @@ export function Secretariat() {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [listening, setListening] = useState(false);
+  const [micOk, setMicOk] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const recRef = useRef<any>(null);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
   }, [messages, loading]);
+
+  useEffect(() => {
+    // Web Speech API is Chrome/Safari-only and needs a secure context (or
+    // localhost). Feature-detect so the mic only shows where it works.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const w = window as any;
+    setMicOk(!!(w.SpeechRecognition || w.webkitSpeechRecognition));
+  }, []);
+
+  function toggleMic() {
+    if (loading) return;
+    if (listening && recRef.current) {
+      recRef.current.stop();
+      return;
+    }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const w = window as any;
+    const SR = w.SpeechRecognition || w.webkitSpeechRecognition;
+    if (!SR) return;
+    const rec = new SR();
+    rec.lang = 'en-US';
+    rec.interimResults = true;
+    rec.continuous = false;
+    rec.maxAlternatives = 1;
+    let finalText = '';
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    rec.onresult = (e: any) => {
+      let interim = '';
+      for (let i = e.resultIndex; i < e.results.length; i++) {
+        const t = e.results[i][0].transcript;
+        if (e.results[i].isFinal) finalText += t;
+        else interim += t;
+      }
+      setInput((finalText + interim).trim());
+    };
+    rec.onend = () => {
+      setListening(false);
+      recRef.current = null;
+      const t = finalText.trim();
+      if (t) void send(t); // hands-free: speak, then auto-send
+    };
+    rec.onerror = () => {
+      setListening(false);
+      recRef.current = null;
+    };
+    recRef.current = rec;
+    setError(null);
+    setListening(true);
+    rec.start();
+  }
 
   async function send(text: string) {
     const q = text.trim();
@@ -122,9 +176,25 @@ export function Secretariat() {
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Ask Secretariat about your catalogs…"
+              placeholder={listening ? 'Listening…' : 'Ask Secretariat about your catalogs…'}
               className="min-w-0 flex-1 rounded-lg border border-ink/15 bg-white px-3 py-2 text-sm outline-none focus:border-brass-400"
             />
+            {micOk && (
+              <button
+                type="button"
+                onClick={toggleMic}
+                disabled={loading}
+                aria-label={listening ? 'Stop listening' : 'Voice input'}
+                title={listening ? 'Listening — click to stop' : 'Speak your question'}
+                className={`rounded-lg px-2.5 py-2 text-sm transition disabled:opacity-40 ${
+                  listening
+                    ? 'animate-pulse bg-red-600 text-white'
+                    : 'border border-ink/15 bg-white text-ink-600 hover:border-brass-400'
+                }`}
+              >
+                🎤
+              </button>
+            )}
             <button
               type="submit"
               disabled={loading || !input.trim()}
