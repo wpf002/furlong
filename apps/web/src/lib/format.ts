@@ -1,8 +1,16 @@
 import type { SaleCategory, Sex } from './api';
 
-// Single source of truth for the Phase 1 valuation disclaimer.
+// Single source of truth for the valuation disclaimer (shown wherever an
+// estimate appears). Scores pedigree + market comparables only — never physical
+// conformation or veterinary condition. Informational, not advice.
 export const VALUATION_DISCLAIMER =
-  'Estimates are based on historical averages, not a trained model (Phase 1).';
+  'Estimates score pedigree and market comparables only — not physical conformation, ' +
+  'soundness, or veterinary condition. Informational, not bloodstock or financial advice.';
+
+// One-line version for the persistent site footer.
+export const FOOTER_DISCLAIMER =
+  'Furlong provides data-driven estimates for information only — not bloodstock, ' +
+  'veterinary, or financial advice. Always inspect a horse and consult a professional before bidding.';
 
 /**
  * Convert a dollar amount (as typed by a buyer) to integer cents for the API.

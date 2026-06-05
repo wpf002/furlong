@@ -3,6 +3,7 @@ import type { ReactNode } from 'react';
 import { Fraunces, Inter } from 'next/font/google';
 import { UserProvider } from '../lib/useUser';
 import { TopNav } from '../components/TopNav';
+import { LegalFooter } from '../components/LegalFooter';
 
 const display = Fraunces({
   subsets: ['latin'],
@@ -31,6 +32,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <UserProvider>
           <TopNav />
           {children}
+          <LegalFooter />
         </UserProvider>
       </body>
     </html>
