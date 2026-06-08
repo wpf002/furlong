@@ -15,10 +15,10 @@
     "@prisma/adapter-pg": "^7.0.0",
     "@prisma/client": "^7.0.0",
     "dotenv": "^17.4.2",
-    "pg": "^8.13.0"
+    "pg": "^8.13.0",
+    "prisma": "^7.0.0"
   },
   "devDependencies": {
-    "prisma": "^7.0.0",
     "typescript": "^5.6.2"
   }
 }

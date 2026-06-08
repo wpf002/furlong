@@ -44,6 +44,9 @@ importers:
       jsonwebtoken:
         specifier: ^9.0.3
         version: 9.0.3
+      tsx:
+        specifier: ^4.19.1
+        version: 4.22.4
       undici:
         specifier: ^6.19.8
         version: 6.26.0
@@ -54,9 +57,6 @@ importers:
       '@types/jsonwebtoken':
         specifier: ^9.0.10
         version: 9.0.10
-      tsx:
-        specifier: ^4.19.1
-        version: 4.22.4
       typescript:
         specifier: ^5.6.2
         version: 5.9.3
@@ -117,10 +117,10 @@ importers:
       pg:
         specifier: ^8.13.0
         version: 8.21.0
-    devDependencies:
       prisma:
         specifier: ^7.0.0
         version: 7.8.0(@types/react@18.3.30)(react-dom@18.3.1(react@18.3.1))(react@18.3.1)(typescript@5.9.3)
+    devDependencies:
       typescript:
         specifier: ^5.6.2
         version: 5.9.3

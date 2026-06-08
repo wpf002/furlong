@@ -35,7 +35,9 @@ await registerCompareRoutes(app);
 await registerJobRoutes(app);
 await registerAssistantRoutes(app);
 
-const port = Number(process.env.API_PORT ?? 4000);
+// Railway (and most PaaS) inject the bind port as PORT; fall back to API_PORT
+// for local dev. Host 0.0.0.0 so the container is reachable.
+const port = Number(process.env.PORT ?? process.env.API_PORT ?? 4000);
 app.listen({ port, host: '0.0.0.0' }).catch((err) => {
   app.log.error(err);
   process.exit(1);
