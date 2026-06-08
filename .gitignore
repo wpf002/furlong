@@ -35,3 +35,5 @@ data/results/*
 next-env.d.ts
 # claude (keep shared launch config, ignore personal local settings)
 .claude/settings.local.json
+.railway/README.md
+.agents/
