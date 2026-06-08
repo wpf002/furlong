@@ -71,7 +71,7 @@ export default function ShortlistsPage() {
         </h1>
         <div className="rule-brass my-5 max-w-xs" />
         <p className="text-sm leading-relaxed text-ink-600">
-          Curated sets of hips you’re tracking, with notes.
+          Curated sets of HIP's you’re tracking, with notes.
         </p>
       </header>
 
@@ -125,7 +125,7 @@ export default function ShortlistsPage() {
                   >
                     <span className="font-serif text-lg text-ink-900">{l.name}</span>
                     <span className="tnum rounded-full bg-ink/5 px-3 py-1 text-xs font-medium text-ink-600">
-                      {l.itemCount} {l.itemCount === 1 ? 'hip' : 'hips'}
+                      {l.itemCount} {l.itemCount === 1 ? 'HIP' : "HIP's"}
                     </span>
                   </Link>
                 </li>
@@ -135,7 +135,7 @@ export default function ShortlistsPage() {
             <div className="rounded-2xl border border-dashed border-ink/15 bg-paper-50 px-6 py-12 text-center">
               <p className="font-serif text-lg text-ink-700">No shortlists yet</p>
               <p className="mt-1.5 text-sm text-ink-500">
-                Create one above, or hit “Save” on any hip in the catalog.
+                Create one above, or hit “Save” on any HIP in the catalog.
               </p>
             </div>
           )}

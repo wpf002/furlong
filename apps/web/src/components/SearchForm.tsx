@@ -10,19 +10,21 @@ import {
   parseSires,
 } from '../lib/format';
 import { Badge } from './Badge';
+import { ChevronDownIcon } from './icons';
+
+function isCatalogPending(sale: Sale): boolean {
+  return sale.hipCount === 0;
+}
 
 function saleSuffix(sale: Sale): string {
   const cat = nonDefaultCategoryLabel(sale.category);
   const cur = nonUsdCurrency(sale.currency);
-  const tags = [cat, cur].filter(Boolean);
+  const tags = [cat, cur, isCatalogPending(sale) ? 'Catalog pending' : null].filter(Boolean);
   return tags.length ? ` · ${tags.join(' · ')}` : '';
 }
 
-export type SortMode = 'rank' | 'value';
-
 export interface SearchSubmit {
   query: SearchQuery;
-  sort: SortMode;
 }
 
 const FIELD =
@@ -40,50 +42,39 @@ export function SearchForm({
   loading: boolean;
   onSaleChange?: (saleId: string) => void;
 }) {
-  const [saleId, setSaleId] = useState(sales[0]?.id ?? '');
+  const [saleId, setSaleId] = useState(
+    () => (sales.find((s) => (s.hipCount ?? 1) > 0) ?? sales[0])?.id ?? '',
+  );
   const [budgetLow, setBudgetLow] = useState('');
   const [budgetHigh, setBudgetHigh] = useState('');
   const [sires, setSires] = useState('');
-  const [hiddenGemsOnly, setHiddenGemsOnly] = useState(false);
-  const [quickBudget, setQuickBudget] = useState('');
 
-  // Report the selected sale upward (initial + on change) so the parent can
-  // offer "Show my matches" for the currently-chosen sale before a search.
   useEffect(() => {
     onSaleChange?.(saleId);
   }, [saleId, onSaleChange]);
 
-  function buildQuery(overrideHigh?: number): SearchQuery {
+  function buildQuery(): SearchQuery {
     const q: SearchQuery = { saleId };
     const low = dollarsToCents(budgetLow);
-    const high = overrideHigh ?? dollarsToCents(budgetHigh);
+    const high = dollarsToCents(budgetHigh);
     if (low !== undefined) q.budgetLowCents = low;
     if (high !== undefined && high > 0) q.budgetHighCents = high;
     const preferred = parseSires(sires);
     if (preferred.length) q.preferredSires = preferred;
-    if (hiddenGemsOnly) q.hiddenGemsOnly = true;
     return q;
   }
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
     if (!saleId) return;
-    onSubmit({ query: buildQuery(), sort: 'rank' });
-  }
-
-  function bestValueUnder() {
-    if (!saleId) return;
-    // Works with or without a cap: a number ranks best value under it; empty
-    // ranks the whole sale by value.
-    const high = dollarsToCents(quickBudget);
-    if (high !== undefined && high > 0) setBudgetHigh(quickBudget);
-    onSubmit({ query: buildQuery(high), sort: 'value' });
+    onSubmit({ query: buildQuery() });
   }
 
   const noSales = sales.length === 0;
   const selectedSale = sales.find((s) => s.id === saleId);
   const selCategory = nonDefaultCategoryLabel(selectedSale?.category);
   const selCurrency = nonUsdCurrency(selectedSale?.currency);
+  const selPending = selectedSale ? isCatalogPending(selectedSale) : false;
 
   return (
     <form
@@ -92,25 +83,35 @@ export function SearchForm({
     >
       <div>
         <label className={LABEL}>Sale</label>
-        <select
-          value={saleId}
-          onChange={(e) => setSaleId(e.target.value)}
-          disabled={noSales}
-          className={`${FIELD} disabled:cursor-not-allowed disabled:bg-paper-200/60`}
-        >
-          {noSales && <option value="">No sales available</option>}
-          {sales.map((s) => (
-            <option key={s.id} value={s.id}>
-              {s.name} ({s.year}) — {s.auctionHouse}
-              {saleSuffix(s)}
-            </option>
-          ))}
-        </select>
-        {(selCategory || selCurrency) && (
+        <div className="relative mt-1.5">
+          <select
+            value={saleId}
+            onChange={(e) => setSaleId(e.target.value)}
+            disabled={noSales}
+            className="w-full cursor-pointer appearance-none rounded-xl border border-ink/15 bg-paper-50 py-3 pl-4 pr-11 font-serif text-base text-ink-900 shadow-card transition hover:border-brass-400/70 focus:border-racing-600 focus:outline-none focus:ring-2 focus:ring-racing-600/15 disabled:cursor-not-allowed disabled:bg-paper-200/60"
+          >
+            {noSales && <option value="">No sales available</option>}
+            {sales.map((s) => (
+              <option key={s.id} value={s.id}>
+                {s.name} ({s.year}) — {s.auctionHouse}
+                {saleSuffix(s)}
+              </option>
+            ))}
+          </select>
+          <ChevronDownIcon className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-brass-600" />
+        </div>
+        {(selCategory || selCurrency || selPending) && (
           <div className="mt-2 flex flex-wrap items-center gap-2">
             {selCategory && <Badge tone="neutral">{selCategory}</Badge>}
             {selCurrency && <Badge tone="brass">{selCurrency}</Badge>}
+            {selPending && <Badge tone="amber">Catalog pending</Badge>}
           </div>
+        )}
+        {selPending && (
+          <p className="mt-2 text-xs text-ink-500">
+            This sale is on the calendar, but its catalog hasn’t been published yet — no
+            HIP&apos;s to search until it drops.
+          </p>
         )}
       </div>
 
@@ -148,17 +149,7 @@ export function SearchForm({
         <p className="mt-1.5 text-xs text-ink-500">Comma-separated.</p>
       </div>
 
-      <label className="flex w-fit cursor-pointer items-center gap-2.5 rounded-lg border border-transparent py-1 text-sm text-ink-700 transition hover:text-ink-900">
-        <input
-          type="checkbox"
-          checked={hiddenGemsOnly}
-          onChange={(e) => setHiddenGemsOnly(e.target.checked)}
-          className="h-4 w-4 rounded border-ink/30 text-brass-500 focus:ring-brass-400/40"
-        />
-        <span className="font-medium">Hidden Gems Only</span>
-      </label>
-
-      <div className="flex flex-col gap-3 border-t border-ink/10 pt-5 sm:flex-row sm:items-center">
+      <div className="border-t border-ink/10 pt-5">
         <button
           type="submit"
           disabled={loading || noSales}
@@ -166,24 +157,6 @@ export function SearchForm({
         >
           {loading ? 'Searching…' : 'Search Catalog'}
         </button>
-
-        <div className="flex items-center gap-2 sm:ml-auto">
-          <input
-            inputMode="decimal"
-            value={quickBudget}
-            onChange={(e) => setQuickBudget(e.target.value)}
-            placeholder="Best Value Under $"
-            className="w-44 rounded-lg border border-ink/15 bg-paper-50 px-3 py-2.5 text-sm text-ink-900 shadow-sm transition placeholder:text-ink-500/60 focus:border-brass-400 focus:outline-none focus:ring-2 focus:ring-brass-400/20"
-          />
-          <button
-            type="button"
-            onClick={bestValueUnder}
-            disabled={loading || noSales}
-            className="whitespace-nowrap rounded-lg border border-brass-400/60 bg-brass-50 px-4 py-2.5 text-sm font-semibold text-brass-700 shadow-sm transition hover:bg-brass-100 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            Best Value
-          </button>
-        </div>
       </div>
     </form>
   );

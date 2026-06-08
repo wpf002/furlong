@@ -5,10 +5,11 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import type { BuyerAlert } from '../lib/api';
 import { useUser } from '../lib/useUser';
-import { BellIcon } from './icons';
+import { BellIcon, MenuIcon, CloseIcon } from './icons';
 
 const NAV = [
   { href: '/', label: 'Search' },
+  { href: '/auction', label: 'Auction' },
   { href: '/compare', label: 'Compare' },
   { href: '/shortlists', label: 'Shortlists' },
   { href: '/calendar', label: 'Calendar' },
@@ -22,10 +23,27 @@ function isActive(pathname: string, href: string): boolean {
 
 export function TopNav() {
   const pathname = usePathname();
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  // Close the mobile menu on route change.
+  useEffect(() => {
+    setMenuOpen(false);
+  }, [pathname]);
 
   return (
     <nav className="sticky top-0 z-30 border-b border-ink/10 bg-paper-100/85 backdrop-blur">
-      <div className="mx-auto flex max-w-5xl items-center gap-4 px-4 py-3 sm:px-6">
+      <div className="mx-auto flex max-w-5xl items-center gap-3 px-4 py-3 sm:gap-4 sm:px-6">
+        {/* Hamburger — phones only (< md) */}
+        <button
+          type="button"
+          onClick={() => setMenuOpen((v) => !v)}
+          aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+          aria-expanded={menuOpen}
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-ink-700 transition hover:bg-ink/5 md:hidden"
+        >
+          {menuOpen ? <CloseIcon className="h-5 w-5" /> : <MenuIcon className="h-5 w-5" />}
+        </button>
+
         <Link
           href="/"
           className="font-serif text-lg font-semibold tracking-tightish text-racing-900"
@@ -33,12 +51,13 @@ export function TopNav() {
           Furlong
         </Link>
 
-        <div className="ml-2 flex items-center gap-1 sm:gap-2">
+        {/* Inline nav — tablet & up (md+) */}
+        <div className="ml-2 hidden items-center gap-1 md:flex lg:gap-2">
           {NAV.map((item) => (
             <Link
               key={item.href}
               href={item.href}
-              className={`rounded-lg px-2.5 py-1.5 text-sm font-medium transition sm:px-3 ${
+              className={`rounded-lg px-2.5 py-1.5 text-sm font-medium transition lg:px-3 ${
                 isActive(pathname, item.href)
                   ? 'bg-racing-800 text-paper-50'
                   : 'text-ink-600 hover:bg-ink/5 hover:text-ink-900'
@@ -54,6 +73,27 @@ export function TopNav() {
           <AuthControl />
         </div>
       </div>
+
+      {/* Mobile menu panel — phones only */}
+      {menuOpen && (
+        <div className="border-t border-ink/10 bg-paper-100/95 px-4 py-2 md:hidden">
+          <div className="mx-auto flex max-w-5xl flex-col gap-1">
+            {NAV.map((item) => (
+              <Link
+                key={item.href}
+                href={item.href}
+                className={`rounded-lg px-3 py-2.5 text-sm font-medium transition ${
+                  isActive(pathname, item.href)
+                    ? 'bg-racing-800 text-paper-50'
+                    : 'text-ink-700 hover:bg-ink/5 hover:text-ink-900'
+                }`}
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
+        </div>
+      )}
     </nav>
   );
 }

@@ -24,17 +24,20 @@ export default async function HipDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ sale?: string }>;
+  searchParams: Promise<{ sale?: string; from?: string }>;
 }) {
   const { id } = await params;
-  const { sale: saleId } = await searchParams;
+  const { sale: saleId, from } = await searchParams;
 
+  // Return the buyer to wherever they opened this hip from (default: Search).
+  const fromAuction = from === 'auction';
+  const backHref = fromAuction ? `/auction${saleId ? `?sale=${encodeURIComponent(saleId)}` : ''}` : '/';
   const backLink = (
     <Link
-      href="/"
+      href={backHref}
       className="text-sm font-medium text-ink-500 transition hover:text-racing-700"
     >
-      ← Back to Search
+      ← Back to {fromAuction ? 'Auction' : 'Search'}
     </Link>
   );
 

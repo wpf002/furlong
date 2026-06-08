@@ -26,6 +26,13 @@ export const metadata = {
   description: 'Catalog-to-shortlist intelligence for thoroughbred yearling buyers.',
 };
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  // Allow zoom for accessibility; cap to avoid layout-breaking over-zoom.
+  maximumScale: 5,
+};
+
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" className={`${display.variable} ${body.variable}`}>

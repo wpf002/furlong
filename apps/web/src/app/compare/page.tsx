@@ -109,7 +109,7 @@ export default function ComparePage() {
           Cross-auction value
         </p>
         <h1 className="mt-2 font-serif text-4xl font-semibold tracking-tightish text-racing-900">
-          Compare houses
+          Compare Houses
         </h1>
         <div className="rule-brass my-5 max-w-xs" />
         <p className="text-sm leading-relaxed text-ink-600">

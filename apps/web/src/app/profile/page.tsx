@@ -96,7 +96,7 @@ export default function ProfilePage() {
           Buyer profile
         </p>
         <h1 className="mt-2 font-serif text-4xl font-semibold tracking-tightish text-racing-900">
-          Your preferences
+          Your Preferences
         </h1>
         <div className="rule-brass my-5 max-w-xs" />
         <p className="text-sm leading-relaxed text-ink-600">

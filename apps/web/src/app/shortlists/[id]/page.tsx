@@ -120,7 +120,7 @@ export default function ShortlistDetailPage({
             </h1>
             <p className="mt-1 text-sm text-ink-500">
               <span className="tnum">{data.items.length}</span>{' '}
-              {data.items.length === 1 ? 'hip' : 'hips'}
+              {data.items.length === 1 ? 'HIP' : "HIP's"}
             </p>
           </header>
 
@@ -136,7 +136,7 @@ export default function ShortlistDetailPage({
             <div className="rounded-2xl border border-dashed border-ink/15 bg-paper-50 px-6 py-12 text-center">
               <p className="font-serif text-lg text-ink-700">This shortlist is empty</p>
               <p className="mt-1.5 text-sm text-ink-500">
-                Hit “Save” on any hip in the catalog to add it here.
+                Hit “Save” on any HIP in the catalog to add it here.
               </p>
             </div>
           ) : (
@@ -189,7 +189,7 @@ function ShortlistRow({
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-3">
             <span className="text-[10px] font-medium uppercase tracking-widest text-ink-500">
-              Hip
+              HIP
             </span>
             <span className="tnum font-serif text-2xl font-semibold leading-none text-racing-800">
               {hip.hipNumber}

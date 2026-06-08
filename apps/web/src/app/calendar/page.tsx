@@ -52,6 +52,7 @@ export default function CalendarPage() {
       .sort((a, b) => b[0] - a[0])
       .map(([year, list]) => ({
         year,
+        hasUpcoming: list.some((s) => s.upcoming),
         sales: [...list].sort((a, b) => {
           if (a.upcoming !== b.upcoming) return a.upcoming ? -1 : 1;
           const da = a.startDate ? Date.parse(a.startDate) : 0;
@@ -60,6 +61,10 @@ export default function CalendarPage() {
         }),
       }));
   }, [sales]);
+
+  // The most recent year stays expanded; all previous years collapse into
+  // dropdowns that start closed.
+  const latestYear = grouped[0]?.year ?? null;
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
@@ -91,18 +96,25 @@ export default function CalendarPage() {
           <p className="font-serif text-lg text-ink-700">No sales on the calendar yet</p>
         </div>
       ) : (
-        <div className="space-y-10">
-          {grouped.map(({ year, sales: yearSales }) => (
-            <section key={year}>
-              <h2 className="mb-3 flex items-baseline gap-3 border-b border-ink/10 pb-2">
+        <div className="space-y-4">
+          {grouped.map(({ year, hasUpcoming, sales: yearSales }) => (
+            <details
+              key={year}
+              open={year === latestYear || hasUpcoming}
+              className="group rounded-2xl border border-ink/10 bg-paper-50/40 px-1"
+            >
+              <summary className="flex cursor-pointer list-none items-baseline gap-3 px-3 py-3">
+                <span className="text-ink-400 transition group-open:rotate-90" aria-hidden>
+                  ›
+                </span>
                 <span className="tnum font-serif text-2xl font-semibold text-racing-900">
                   {year}
                 </span>
                 <span className="text-xs text-ink-500">
                   {yearSales.length} {yearSales.length === 1 ? 'sale' : 'sales'}
                 </span>
-              </h2>
-              <ul className="space-y-3">
+              </summary>
+              <ul className="space-y-3 px-2 pb-3">
                 {yearSales.map((s) => {
                   const date = formatDate(s.startDate);
                   const catLabel = nonDefaultCategoryLabel(s.category);
@@ -125,13 +137,15 @@ export default function CalendarPage() {
                         </p>
                       </div>
                       <span className="tnum shrink-0 rounded-full bg-ink/5 px-3 py-1 text-xs font-medium text-ink-600">
-                        {s.hipCount} {s.hipCount === 1 ? 'HIP' : "HIP's"}
+                        {s.hipCount === 0
+                          ? 'Catalog pending'
+                          : `${s.hipCount} ${s.hipCount === 1 ? 'HIP' : "HIP's"}`}
                       </span>
                     </li>
                   );
                 })}
               </ul>
-            </section>
+            </details>
           ))}
         </div>
       )}
