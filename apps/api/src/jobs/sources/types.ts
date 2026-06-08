@@ -36,6 +36,9 @@ export interface CatalogHip {
   damsireName: string | null;
   consignorName: string | null;
   breederName: string | null;
+  /** Under-tack breeze (2YO-in-training sales only, e.g. OBS). */
+  breezeTime?: string | null;
+  breezeSeconds?: number | null;
 }
 
 export interface FetchedSale {

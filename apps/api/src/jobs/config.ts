@@ -43,8 +43,9 @@ export const jobsConfig = {
   },
   /** Cron schedules (node-cron / BullMQ repeat syntax). Overridable via env. */
   schedules: {
-    // Daily 06:00 — look for newly-announced sales.
-    discover: process.env.CRON_DISCOVER ?? '0 6 * * *',
+    // Every 15 min — find newly-announced sales and pull catalogs the moment
+    // they drop (near-real-time). Override via CRON_DISCOVER.
+    discover: process.env.CRON_DISCOVER ?? '*/15 * * * *',
     // Hourly — fire "sale is N hours out" alerts.
     saleSoon: process.env.CRON_SALE_SOON ?? '0 * * * *',
     // Weekly Sun 03:00 — retrain on accumulated results.
