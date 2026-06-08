@@ -89,8 +89,7 @@ export default function AuctionPage() {
         </h1>
         <div className="rule-brass my-5 max-w-xs" />
         <p className="text-sm leading-relaxed text-ink-600">
-          Pick a sale and page through its catalog one HIP at a time, in catalog order. Use the
-          arrows (or your ← → keys).
+          Page through a sale&apos;s catalog one HIP at a time — use the arrows or ← → keys.
         </p>
       </header>
 
