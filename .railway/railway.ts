@@ -1,27 +1,16 @@
-import {
-  defineRailway,
-  github,
-  postgres,
-  preserve,
-  project,
-  redis,
-  service,
-} from "railway/iac";
+import { defineRailway, postgres, preserve, project, redis, service } from "railway/iac";
 
-// Furlong — full-stack deploy. Secrets + composed URLs (AUTH_SECRET,
-// JOBS_ADMIN_TOKEN, ML_SERVICE_URL, SELF_API_URL, NEXT_PUBLIC_API_URL) are set
-// out-of-band via `railway variables` and marked preserve() here so an apply
-// never deletes them and they never land in source. Workspace packages are TS
-// source, so api + worker run via tsx in production.
+// Furlong — full-stack deploy. Services deploy via `railway up` (CLI upload),
+// not a GitHub source, so there's no GitHub-App dependency. Secrets + composed
+// URLs (AUTH_SECRET, JOBS_ADMIN_TOKEN, ML_SERVICE_URL, SELF_API_URL,
+// NEXT_PUBLIC_API_URL) are set out-of-band via `railway variables` and marked
+// preserve() so an apply never deletes them or leaks them into source.
+// Workspace packages are TS source, so api + worker run via tsx in production.
 export default defineRailway(() => {
-  const repo = "wpf002/furlong";
-  const branch = "main";
-
   const db = postgres("postgres");
   const cache = redis("redis");
 
   const api = service("api", {
-    source: github(repo, { branch }),
     build: "pnpm --filter @furlong/db exec prisma generate",
     start:
       "pnpm --filter @furlong/db exec prisma migrate deploy && pnpm --filter @furlong/api exec tsx src/server.ts",
@@ -39,7 +28,6 @@ export default defineRailway(() => {
   });
 
   const ml = service("ml", {
-    source: github(repo, { branch }),
     rootDirectory: "services/ml",
     start: "uvicorn app.main:app --host 0.0.0.0 --port $PORT",
     env: {
@@ -49,7 +37,6 @@ export default defineRailway(() => {
   });
 
   const worker = service("worker", {
-    source: github(repo, { branch }),
     build: "pnpm --filter @furlong/db exec prisma generate",
     start: "pnpm --filter @furlong/api exec tsx src/jobs/worker.ts",
     env: {
@@ -66,7 +53,6 @@ export default defineRailway(() => {
   });
 
   const web = service("web", {
-    source: github(repo, { branch }),
     build: "pnpm --filter @furlong/web build",
     start: "pnpm --filter @furlong/web start",
     env: {
