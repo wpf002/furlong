@@ -224,9 +224,15 @@ _COMPS_CACHE: list[dict] | None = None
 
 
 def _database_url() -> str | None:
-    # Resolve .env relative to the repo root (module is services/ml/app/...).
-    repo_root = Path(__file__).resolve().parents[4]
-    load_dotenv(repo_root / ".env")
+    # Best-effort: load the repo-root .env for local dev. In deployed
+    # environments (e.g. Railway, service root = services/ml) the path is
+    # shallower and DATABASE_URL is already in the environment, so any failure
+    # here is non-fatal.
+    try:
+        repo_root = Path(__file__).resolve().parents[4]
+        load_dotenv(repo_root / ".env")
+    except Exception:
+        pass
     return os.environ.get("DATABASE_URL")
 
 
