@@ -25,16 +25,16 @@ export default async function Home() {
     <main className="mx-auto max-w-5xl px-4 py-12 sm:px-6 sm:py-16">
       <header className="mb-10">
         <p className="text-[11px] font-semibold uppercase tracking-[0.25em] text-brass-600">
-          Bloodstock Intelligence
+          For yearling buyers
         </p>
         <h1 className="mt-2 font-serif text-5xl font-semibold tracking-tightish text-racing-900 sm:text-6xl">
           Furlong
         </h1>
         <div className="rule-brass my-5 max-w-xs" />
         <p className="max-w-2xl text-base leading-relaxed text-ink-600">
-          Catalog-to-shortlist intelligence for thoroughbred yearling buyers. Pick a sale,
-          set your budget and preferences, and get a ranked shortlist with comparable
-          valuation bands.
+          Pick a sale, tell us your budget and the sires you like, and we&apos;ll hand you a
+          shortlist — each horse with a price range built from how comparable yearlings have
+          actually sold. Do your homework before the ring, not in it.
         </p>
       </header>
 

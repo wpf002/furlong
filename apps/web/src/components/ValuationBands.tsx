@@ -39,11 +39,11 @@ function RangeBar({
   const width = Math.max(right - left, 1.5);
 
   return (
-    <div className="grid grid-cols-[auto_1fr] items-center gap-x-3 gap-y-1 sm:grid-cols-[7.5rem_1fr]">
+    <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-1">
       <dt className="text-[11px] font-medium uppercase tracking-wide text-ink-500">
         {band.label}
       </dt>
-      <dd className="tnum whitespace-nowrap text-sm font-semibold text-ink-900">
+      <dd className="tnum min-w-0 text-sm font-semibold text-ink-900">
         {formatMoney(band.low, currency)}
         <span className="px-1 font-normal text-ink-500">–</span>
         {formatMoney(band.high, currency)}

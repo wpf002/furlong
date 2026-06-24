@@ -98,7 +98,14 @@ export async function runDiscover(
       });
 
       const hipCount = await prisma.hip.count({ where: { saleId: sale.id } });
-      if (hipCount === 0) {
+      // Re-fetch a sale's catalog when it's empty OR still "active" — upcoming,
+      // or concluded within the last 30 days — so catalog additions and
+      // freshly-posted results are reflected. Ingestion is idempotent (hips
+      // upsert), so re-running a stable catalog is a no-op. Settled older sales
+      // are left alone to avoid needless source traffic.
+      const start = d.startDate ? Date.parse(d.startDate) : null;
+      const active = start == null || start >= Date.now() - 30 * 86_400_000;
+      if (hipCount === 0 || active) {
         const job: IngestSaleJobData = {
           source: d.source,
           code: d.code,

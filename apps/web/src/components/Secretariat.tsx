@@ -56,8 +56,9 @@ function RichText({ text }: { text: string }) {
 }
 
 const GREETING =
-  "Hi, I'm Secretariat. Ask me about your catalogs — \"find all colts by Into Mischief\", " +
-  '"which sales do I have?", or "how do Frankel\'s yearlings sell?". I can also explain how the app works.';
+  "Hey — I'm Secretariat. Ask me anything about your catalogs: \"show me the colts by " +
+  'Into Mischief", "which sales do I have?", or "how have Frankel\'s yearlings been selling?" ' +
+  'I can walk you through the app too.';
 
 const SUGGESTIONS = [
   'Which sales do I have?',

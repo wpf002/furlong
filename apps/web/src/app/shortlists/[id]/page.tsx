@@ -171,6 +171,23 @@ function ShortlistRow({
   const [dirty, setDirty] = useState(false);
   const [busy, setBusy] = useState(false);
 
+  // The saved hip may no longer be in the catalog (e.g. a catalog refresh
+  // replaced it). Render a graceful, removable placeholder instead of crashing.
+  if (!hip) {
+    return (
+      <li className="flex items-center justify-between gap-4 rounded-2xl border border-ink/10 bg-paper-50 px-5 py-4 shadow-card">
+        <p className="text-sm text-ink-500">This HIP is no longer in the catalog.</p>
+        <button
+          type="button"
+          onClick={() => void onRemove(item.hipId)}
+          className="shrink-0 text-xs font-medium text-red-600 transition hover:text-red-700"
+        >
+          Remove
+        </button>
+      </li>
+    );
+  }
+
   const sire = hip.sireName ?? 'Unknown sire';
   const dam = hip.damName ?? 'Unknown dam';
   const meta = sexColorLabel(hip.sex, null);
@@ -254,7 +271,7 @@ function ShortlistRow({
           </div>
         </div>
 
-        <div className="w-full shrink-0 sm:w-64 sm:border-l sm:border-ink/10 sm:pl-5">
+        <div className="w-full shrink-0 sm:w-72 sm:border-l sm:border-ink/10 sm:pl-5">
           <ValuationBands valuation={hip.valuation} showDisclaimer={false} compact />
         </div>
       </div>

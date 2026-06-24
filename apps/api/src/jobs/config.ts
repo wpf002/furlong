@@ -48,8 +48,9 @@ export const jobsConfig = {
     discover: process.env.CRON_DISCOVER ?? '*/15 * * * *',
     // Hourly — fire "sale is N hours out" alerts.
     saleSoon: process.env.CRON_SALE_SOON ?? '0 * * * *',
-    // Weekly Sun 03:00 — retrain on accumulated results.
-    retrain: process.env.CRON_RETRAIN ?? '0 3 * * 0',
+    // Nightly 03:00 — retrain on accumulated results so the model self-learns
+    // from every freshly-ingested sale (override via CRON_RETRAIN).
+    retrain: process.env.CRON_RETRAIN ?? '0 3 * * *',
   },
   /** SALE_SOON fires when a sale starts within this many hours. */
   get saleSoonWindowHours(): number {
