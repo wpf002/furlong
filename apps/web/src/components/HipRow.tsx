@@ -123,12 +123,6 @@ export function HipRow({
               )}
             </p>
           )}
-
-          {hip.oneLiner && (
-            <p className="mt-3 border-t border-ink/5 pt-3 text-sm leading-relaxed text-ink-700">
-              {hip.oneLiner}
-            </p>
-          )}
         </div>
 
           {/* Actual price (settled sales) and/or the model estimate. Save sits
