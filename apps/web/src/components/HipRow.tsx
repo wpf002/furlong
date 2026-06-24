@@ -10,10 +10,12 @@ export function HipRow({
   hip,
   saleId,
   currency = 'USD',
+  showSave = true,
 }: {
   hip: SearchHip;
   saleId: string;
   currency?: string;
+  showSave?: boolean;
 }) {
   const { horse } = hip;
   const sire = horse.sireName ?? 'Unknown sire';
@@ -128,9 +130,11 @@ export function HipRow({
           {/* Actual price (settled sales) and/or the model estimate. Save sits
               at the top of this column so it never overlays the figures. */}
           <div className="flex w-full shrink-0 flex-col gap-2.5 sm:w-72 sm:border-l sm:border-ink/10 sm:pl-5">
-            <div className="pointer-events-auto flex justify-end">
-              <SaveToShortlist hipId={hip.id} />
-            </div>
+            {showSave && (
+              <div className="pointer-events-auto flex justify-end">
+                <SaveToShortlist hipId={hip.id} />
+              </div>
+            )}
             {soldCents != null ? (
               <div>
                 <p className="text-[11px] font-medium uppercase tracking-wide text-ink-500">

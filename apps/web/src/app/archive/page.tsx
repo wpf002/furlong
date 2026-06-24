@@ -33,6 +33,9 @@ export default async function ArchivePage() {
         sales={sales}
         salesError={salesError}
         storageKey="furlong:lastArchiveSearch"
+        showBudget={false}
+        showGems={false}
+        showSave={false}
       />
     </main>
   );

@@ -40,10 +40,16 @@ export function SearchExperience({
   sales,
   salesError,
   storageKey = 'furlong:lastSearch',
+  showBudget = true,
+  showGems = true,
+  showSave = true,
 }: {
   sales: Sale[];
   salesError: string | null;
   storageKey?: string;
+  showBudget?: boolean;
+  showGems?: boolean;
+  showSave?: boolean;
 }) {
   const { user, userFetch } = useUser();
   const [hips, setHips] = useState<SearchHip[] | null>(null);
@@ -200,6 +206,7 @@ export function SearchExperience({
         onSubmit={handleSubmit}
         loading={loading}
         onSaleChange={handleSaleChange}
+        showBudget={showBudget}
       />
 
       <p className="text-xs italic text-ink-500">{VALUATION_DISCLAIMER}</p>
@@ -239,15 +246,17 @@ export function SearchExperience({
               )}
             </h2>
             <div className="flex flex-wrap items-center gap-3">
-              <label className="flex cursor-pointer items-center gap-1.5 text-xs font-medium text-ink-600">
-                <input
-                  type="checkbox"
-                  checked={gemsOnly}
-                  onChange={(e) => setGemsOnly(e.target.checked)}
-                  className="h-3.5 w-3.5 rounded border-ink/30 text-brass-500 focus:ring-brass-400/40"
-                />
-                Hidden Gems
-              </label>
+              {showGems && (
+                <label className="flex cursor-pointer items-center gap-1.5 text-xs font-medium text-ink-600">
+                  <input
+                    type="checkbox"
+                    checked={gemsOnly}
+                    onChange={(e) => setGemsOnly(e.target.checked)}
+                    className="h-3.5 w-3.5 rounded border-ink/30 text-brass-500 focus:ring-brass-400/40"
+                  />
+                  Hidden Gems
+                </label>
+              )}
               {user && (
                 <label
                   className="flex cursor-pointer items-center gap-1.5 text-xs font-medium text-ink-600"
@@ -286,7 +295,7 @@ export function SearchExperience({
             <>
               <div className="space-y-4">
                 {visible.slice(0, shown).map((hip) => (
-                  <HipRow key={hip.id} hip={hip} saleId={activeSaleId} currency={currency} />
+                  <HipRow key={hip.id} hip={hip} saleId={activeSaleId} currency={currency} showSave={showSave} />
                 ))}
               </div>
               {visible.length > shown && (

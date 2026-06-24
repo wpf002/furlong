@@ -36,11 +36,13 @@ export function SearchForm({
   onSubmit,
   loading,
   onSaleChange,
+  showBudget = true,
 }: {
   sales: Sale[];
   onSubmit: (s: SearchSubmit) => void;
   loading: boolean;
   onSaleChange?: (saleId: string) => void;
+  showBudget?: boolean;
 }) {
   const [saleId, setSaleId] = useState(
     () => (sales.find((s) => (s.hipCount ?? 1) > 0) ?? sales[0])?.id ?? '',
@@ -115,28 +117,30 @@ export function SearchForm({
         )}
       </div>
 
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-        <div>
-          <label className={LABEL}>Budget Low ($)</label>
-          <input
-            inputMode="decimal"
-            value={budgetLow}
-            onChange={(e) => setBudgetLow(e.target.value)}
-            placeholder="e.g. 50,000"
-            className={FIELD}
-          />
+      {showBudget && (
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <label className={LABEL}>Budget — Low End ($)</label>
+            <input
+              inputMode="decimal"
+              value={budgetLow}
+              onChange={(e) => setBudgetLow(e.target.value)}
+              placeholder="e.g. 50,000"
+              className={FIELD}
+            />
+          </div>
+          <div>
+            <label className={LABEL}>Budget — High End ($)</label>
+            <input
+              inputMode="decimal"
+              value={budgetHigh}
+              onChange={(e) => setBudgetHigh(e.target.value)}
+              placeholder="e.g. 250,000"
+              className={FIELD}
+            />
+          </div>
         </div>
-        <div>
-          <label className={LABEL}>Budget High ($)</label>
-          <input
-            inputMode="decimal"
-            value={budgetHigh}
-            onChange={(e) => setBudgetHigh(e.target.value)}
-            placeholder="e.g. 250,000"
-            className={FIELD}
-          />
-        </div>
-      </div>
+      )}
 
       <div>
         <label className={LABEL}>Preferred Sires</label>
