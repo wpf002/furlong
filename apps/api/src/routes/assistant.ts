@@ -58,6 +58,9 @@ export async function registerAssistantRoutes(app: FastifyInstance) {
       };
     }
     const model = process.env.ASSISTANT_MODEL ?? 'claude-sonnet-4-5';
+    // Long answers (e.g. listing every hidden gem in a sale) need headroom so
+    // the reply isn't truncated mid-list. Overridable via ASSISTANT_MAX_TOKENS.
+    const maxTokens = Number(process.env.ASSISTANT_MAX_TOKENS ?? 4096) || 4096;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const messages: any[] = clean.map((m) => ({ role: m.role, content: m.content }));
@@ -71,7 +74,7 @@ export async function registerAssistantRoutes(app: FastifyInstance) {
           'anthropic-version': '2023-06-01',
           'content-type': 'application/json',
         },
-        body: JSON.stringify({ model, max_tokens: 1024, system: SYSTEM, tools: TOOLS, messages }),
+        body: JSON.stringify({ model, max_tokens: maxTokens, system: SYSTEM, tools: TOOLS, messages }),
         headersTimeout: 60_000,
         bodyTimeout: 60_000,
       });
