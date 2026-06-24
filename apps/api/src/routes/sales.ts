@@ -9,11 +9,29 @@ import { valueSaleByCategory } from '../valuation/dispatch.js';
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL ?? 'http://localhost:8000';
 
 export async function registerSaleRoutes(app: FastifyInstance) {
-  // List sales. Includes hipCount so the UI can flag catalog-pending sales
-  // (upcoming sales whose catalog hasn't dropped yet — 0 hips).
-  app.get('/sales', async () => {
+  // List sales. Includes hipCount so the UI can flag catalog-pending sales.
+  // ?status=upcoming  → startDate in the future OR null (date not yet set)
+  // ?status=past      → startDate in the past (confirmed concluded)
+  // ?status=all / omitted → everything, sorted newest first
+  app.get<{ Querystring: { status?: string } }>('/sales', async (req) => {
+    const status = req.query.status ?? 'all';
+    const thisYear = new Date().getUTCFullYear();
+
+    // Upcoming = current year and later (whether dated or not).
+    // Past = any year before the current year.
+    // This is robust against historical sales that were ingested without dates.
+    const where =
+      status === 'upcoming'
+        ? { year: { gte: thisYear } }
+        : status === 'past'
+          ? { year: { lt: thisYear } }
+          : undefined;
+
     const sales = await prisma.sale.findMany({
-      orderBy: [{ year: 'desc' }, { startDate: 'asc' }],
+      where,
+      // Newest first across all statuses. Undated (null) sales sort to the top
+      // of upcoming lists (they're newly announced; date TBD).
+      orderBy: [{ startDate: { sort: 'desc', nulls: 'first' } }, { year: 'desc' }],
       include: { _count: { select: { hips: true } } },
     });
     return sales.map(({ _count, ...s }) => ({ ...s, hipCount: _count.hips }));

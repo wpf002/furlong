@@ -9,6 +9,7 @@ import { BellIcon, MenuIcon, CloseIcon } from './icons';
 
 const NAV = [
   { href: '/', label: 'Search' },
+  { href: '/archive', label: 'Archive' },
   { href: '/auction', label: 'Auction' },
   { href: '/compare', label: 'Compare' },
   { href: '/shortlists', label: 'Shortlists' },

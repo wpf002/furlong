@@ -39,9 +39,11 @@ function matchesProfile(hip: SearchHip, profile: BuyerProfile): boolean {
 export function SearchExperience({
   sales,
   salesError,
+  storageKey = 'furlong:lastSearch',
 }: {
   sales: Sale[];
   salesError: string | null;
+  storageKey?: string;
 }) {
   const { user, userFetch } = useUser();
   const [hips, setHips] = useState<SearchHip[] | null>(null);
@@ -113,7 +115,7 @@ export function SearchExperience({
   // same results) — otherwise auto-run the default sale, capped to 20.
   useEffect(() => {
     try {
-      const raw = sessionStorage.getItem('furlong:lastSearch');
+      const raw = sessionStorage.getItem(storageKey);
       if (raw) {
         const s = JSON.parse(raw);
         if (Array.isArray(s.hips)) {
@@ -143,7 +145,7 @@ export function SearchExperience({
     if (hips === null) return;
     try {
       sessionStorage.setItem(
-        'furlong:lastSearch',
+        storageKey,
         JSON.stringify({ hips, count, currency, activeSaleId, text, gemsOnly, matchesOnly, shown }),
       );
     } catch {

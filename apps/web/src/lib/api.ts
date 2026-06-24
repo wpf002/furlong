@@ -134,8 +134,9 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await res.json()) as T;
 }
 
-export function getSales(): Promise<Sale[]> {
-  return request<Sale[]>('/sales');
+export function getSales(status?: 'upcoming' | 'past' | 'all'): Promise<Sale[]> {
+  const qs = status && status !== 'all' ? `?status=${status}` : '';
+  return request<Sale[]>(`/sales${qs}`);
 }
 
 export function search(query: SearchQuery): Promise<SearchResponse> {

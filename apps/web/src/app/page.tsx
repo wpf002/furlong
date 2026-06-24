@@ -9,7 +9,7 @@ export default async function Home() {
   let salesError: string | null = null;
 
   try {
-    sales = await getSales();
+    sales = await getSales('upcoming');
   } catch (err) {
     salesError = err instanceof Error ? err.message : 'Unknown error';
   }
