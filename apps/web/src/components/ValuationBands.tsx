@@ -39,22 +39,22 @@ function RangeBar({
   const width = Math.max(right - left, 1.5);
 
   return (
-    <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-x-3 gap-y-1">
+    // Label, then figure, then bar — stacked so the figure always has the full
+    // column width and fits on one line (never wraps or overflows the card).
+    <div className="space-y-1">
       <dt className="text-[11px] font-medium uppercase tracking-wide text-ink-500">
         {band.label}
       </dt>
-      <dd className="tnum min-w-0 text-sm font-semibold text-ink-900">
+      <dd className="tnum whitespace-nowrap text-sm font-semibold text-ink-900">
         {formatMoney(band.low, currency)}
         <span className="px-1 font-normal text-ink-500">–</span>
         {formatMoney(band.high, currency)}
       </dd>
-      <div className="col-start-2 row-start-2">
-        <div className="relative h-2 rounded-full bg-paper-300/70">
-          <div
-            className={`absolute inset-y-0 rounded-full ${band.className}`}
-            style={{ left: `${left}%`, width: `${width}%` }}
-          />
-        </div>
+      <div className="relative h-2 rounded-full bg-paper-300/70">
+        <div
+          className={`absolute inset-y-0 rounded-full ${band.className}`}
+          style={{ left: `${left}%`, width: `${width}%` }}
+        />
       </div>
     </div>
   );

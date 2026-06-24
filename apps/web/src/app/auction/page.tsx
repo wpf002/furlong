@@ -306,7 +306,7 @@ function AuctionCard({
           </Field>
         )}
         {horse.foalingYear != null && <Field label="Foaled">{horse.foalingYear}</Field>}
-        {damsire && <Field label="Broodmare sire">{damsire}</Field>}
+        {damsire && <Field label="Damsire">{damsire}</Field>}
         {consignor && <Field label="Consignor">{consignor}</Field>}
         {(hip.breeder?.name ?? horse.breederName) && (
           <Field label="Breeder">{hip.breeder?.name ?? horse.breederName}</Field>
@@ -335,7 +335,7 @@ function AuctionCard({
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="min-w-0">
-      <dt className="text-ink/40">{label}</dt>
+      <dt className="whitespace-nowrap text-ink/40">{label}</dt>
       <dd className="truncate text-ink-700">{children}</dd>
     </div>
   );
