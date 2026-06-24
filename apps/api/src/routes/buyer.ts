@@ -95,6 +95,19 @@ export async function registerBuyerRoutes(app: FastifyInstance) {
     return lists.map((l) => ({ id: l.id, name: l.name, itemCount: l._count.items, createdAt: l.createdAt }));
   });
 
+  // Distinct hip IDs the buyer has saved to ANY shortlist — lets the UI show a
+  // persistent "Saved" state on result cards and the hip page.
+  app.get('/me/saved-hips', async (req, reply) => {
+    const u = await requireUser(req, reply);
+    if (!u) return;
+    const rows = await prisma.shortlistItem.findMany({
+      where: { shortlist: { userId: u.id } },
+      select: { hipId: true },
+      distinct: ['hipId'],
+    });
+    return rows.map((r) => r.hipId);
+  });
+
   app.post('/me/shortlists', async (req, reply) => {
     const u = await requireUser(req, reply);
     if (!u) return;

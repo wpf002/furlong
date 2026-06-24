@@ -34,10 +34,15 @@ export function HipRow({
           : 'border-ink/10 hover:border-ink/20'
       }`}
     >
+      {/* Stretched link covers the card for navigation; content sits above with
+          pointer-events disabled so clicks fall through — except the Save
+          control, which re-enables pointer events and never navigates. */}
       <Link
         href={`/hips/${hip.id}?sale=${encodeURIComponent(saleId)}`}
-        className="block"
-      >
+        aria-label={`View HIP ${hip.hipNumber}`}
+        className="absolute inset-0 z-0 rounded-2xl"
+      />
+      <div className="pointer-events-none relative z-10">
         <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-stretch">
         {/* Hip numeral block */}
         <div className="flex shrink-0 items-start gap-4 sm:flex-col sm:items-center sm:justify-start sm:border-r sm:border-ink/10 sm:pr-5">
@@ -129,7 +134,7 @@ export function HipRow({
           {/* Actual price (settled sales) and/or the model estimate. Save sits
               at the top of this column so it never overlays the figures. */}
           <div className="flex w-full shrink-0 flex-col gap-2.5 sm:w-72 sm:border-l sm:border-ink/10 sm:pl-5">
-            <div className="flex justify-end">
+            <div className="pointer-events-auto flex justify-end">
               <SaveToShortlist hipId={hip.id} />
             </div>
             {soldCents != null ? (
@@ -162,7 +167,7 @@ export function HipRow({
             )}
           </div>
         </div>
-      </Link>
+      </div>
     </div>
   );
 }

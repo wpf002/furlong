@@ -24,6 +24,10 @@ interface UserContextValue {
    * Throws if no user is signed in, so callers can prompt sign-in.
    */
   userFetch: <T>(path: string, init?: RequestInit) => Promise<T>;
+  /** True if the given hip is saved to any of the buyer's shortlists. */
+  isSaved: (hipId: string) => boolean;
+  /** Optimistically mark a hip as saved (after a successful save). */
+  markSaved: (hipId: string) => void;
 }
 
 const UserContext = createContext<UserContextValue | null>(null);
@@ -51,6 +55,7 @@ function readStored(): AuthUser | null {
 export function UserProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<AuthUser | null>(null);
   const [ready, setReady] = useState(false);
+  const [savedHips, setSavedHips] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     setUser(readStored());
@@ -134,9 +139,33 @@ export function UserProvider({ children }: { children: ReactNode }) {
     [user, logout],
   );
 
+  // Load the set of saved hip IDs whenever the signed-in user changes, so the
+  // Save button can show a persistent "Saved" state across pages/reloads.
+  useEffect(() => {
+    if (!ready || !user) {
+      setSavedHips(new Set());
+      return;
+    }
+    let cancelled = false;
+    userFetch<string[]>('/me/saved-hips')
+      .then((ids) => !cancelled && setSavedHips(new Set(Array.isArray(ids) ? ids : [])))
+      .catch(() => {
+        /* leave the set empty on error */
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [ready, user, userFetch]);
+
+  const isSaved = useCallback((hipId: string) => savedHips.has(hipId), [savedHips]);
+  const markSaved = useCallback(
+    (hipId: string) => setSavedHips((prev) => new Set(prev).add(hipId)),
+    [],
+  );
+
   const value = useMemo<UserContextValue>(
-    () => ({ user, ready, login, logout, userFetch }),
-    [user, ready, login, logout, userFetch],
+    () => ({ user, ready, login, logout, userFetch, isSaved, markSaved }),
+    [user, ready, login, logout, userFetch, isSaved, markSaved],
   );
 
   return <UserContext.Provider value={value}>{children}</UserContext.Provider>;

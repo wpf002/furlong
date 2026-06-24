@@ -17,7 +17,7 @@ export function SaveToShortlist({
   hipId: string;
   variant?: 'pill' | 'button';
 }) {
-  const { user, ready, userFetch } = useUser();
+  const { user, ready, userFetch, isSaved, markSaved } = useUser();
   const [open, setOpen] = useState(false);
   const [lists, setLists] = useState<ShortlistSummary[] | null>(null);
   const [loading, setLoading] = useState(false);
@@ -71,6 +71,7 @@ export function SaveToShortlist({
         body: JSON.stringify({ hipId, note: note.trim() || undefined }),
       });
       setSavedTo(shortlistName);
+      markSaved(hipId);
       setNote('');
       setOpen(false);
     } catch (err) {
@@ -107,6 +108,10 @@ export function SaveToShortlist({
   // Don't render anything decisive until we know auth state.
   if (!ready) return null;
 
+  // "Saved" reflects the persistent server state (saved to any shortlist) or a
+  // save made in this session.
+  const saved = !!savedTo || isSaved(hipId);
+
   return (
     // Stop clicks bubbling to a parent <Link> (this control is rendered inside
     // the result card's link).
@@ -123,8 +128,8 @@ export function SaveToShortlist({
         }}
         className={base}
       >
-        <BookmarkIcon filled={!!savedTo} className="h-3.5 w-3.5" />
-        {savedTo ? 'Saved' : 'Save'}
+        <BookmarkIcon filled={saved} className="h-3.5 w-3.5" />
+        {saved ? 'Saved' : 'Save'}
       </button>
 
       {open && (

@@ -24,6 +24,7 @@ export default defineRailway(() => {
       JOBS_ADMIN_TOKEN: preserve(),
       ML_SERVICE_URL: preserve(),
       SELF_API_URL: preserve(),
+      ANTHROPIC_API_KEY: preserve(),
     },
   });
 
