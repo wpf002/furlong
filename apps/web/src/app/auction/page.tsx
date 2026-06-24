@@ -15,6 +15,8 @@ export default function AuctionPage() {
   const [index, setIndex] = useState(0);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [jump, setJump] = useState('');
+  const [jumpMiss, setJumpMiss] = useState(false);
 
   // Load the list of sales once.
   useEffect(() => {
@@ -44,6 +46,8 @@ export default function AuctionPage() {
     setError(null);
     setHips(null);
     setIndex(0);
+    setJump('');
+    setJumpMiss(false);
     getSaleHips(saleId)
       .then((list) => {
         if (cancelled) return;
@@ -64,6 +68,24 @@ export default function AuctionPage() {
   const go = useCallback(
     (delta: number) => setIndex((i) => Math.min(Math.max(i + delta, 0), Math.max(total - 1, 0))),
     [total],
+  );
+
+  // Jump straight to a HIP number (catalog is sorted by hipNumber).
+  const jumpToHip = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
+      const n = parseInt(jump.trim(), 10);
+      if (!Number.isFinite(n) || !hips) return;
+      const i = hips.findIndex((h) => h.hipNumber === n);
+      if (i >= 0) {
+        setIndex(i);
+        setJumpMiss(false);
+        setJump('');
+      } else {
+        setJumpMiss(true);
+      }
+    },
+    [jump, hips],
   );
 
   // Left / right arrow keys flip cards.
@@ -146,12 +168,36 @@ export default function AuctionPage() {
 
       {!loading && current && (
         <>
-          {/* Position counter */}
-          <div className="mb-3 flex items-center justify-between text-xs text-ink-500">
+          {/* Position counter + jump-to-HIP search */}
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-ink-500">
             <span className="tnum">
               HIP <span className="font-semibold text-ink-700">{index + 1}</span> of {total}
             </span>
-            <span className="tnum">{sale?.name}</span>
+            <form onSubmit={jumpToHip} className="flex items-center gap-1.5">
+              <label htmlFor="hip-jump" className="text-ink-500">
+                Go to HIP
+              </label>
+              <input
+                id="hip-jump"
+                inputMode="numeric"
+                value={jump}
+                onChange={(e) => {
+                  setJump(e.target.value.replace(/[^0-9]/g, ''));
+                  setJumpMiss(false);
+                }}
+                placeholder="#"
+                className={`tnum w-16 rounded-lg border bg-paper-50 px-2 py-1 text-center text-ink-900 shadow-sm focus:outline-none focus:ring-2 focus:ring-racing-600/15 ${
+                  jumpMiss ? 'border-red-400' : 'border-ink/15 focus:border-racing-600'
+                }`}
+              />
+              <button
+                type="submit"
+                className="rounded-lg border border-ink/15 bg-paper-50 px-2.5 py-1 font-medium text-ink-700 transition hover:border-brass-400 hover:text-ink-900"
+              >
+                Go
+              </button>
+              {jumpMiss && <span className="text-red-600">not in this sale</span>}
+            </form>
           </div>
 
           {/* Carousel: ◀ card ▶ */}
