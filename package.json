@@ -17,7 +17,7 @@
     "db:studio": "pnpm --filter @furlong/db studio",
     "infra:up": "docker compose up -d",
     "infra:down": "docker compose down",
-    "ml:dev": "cd services/ml && uvicorn app.main:app --reload --port 8000"
+    "ml:dev": "cd services/ml && uvicorn app.main:app --reload --port 8001"
   },
   "devDependencies": {
     "prettier": "^3.3.3",
