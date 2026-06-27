@@ -21,7 +21,7 @@ export default function AuctionPage() {
   // Load the list of sales once.
   useEffect(() => {
     let cancelled = false;
-    getSales()
+    getSales('upcoming')
       .then((all) => {
         if (cancelled) return;
         setSales(all);
