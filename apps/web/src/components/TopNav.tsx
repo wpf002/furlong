@@ -14,7 +14,7 @@ const NAV = [
   { href: '/compare', label: 'Compare' },
   { href: '/shortlists', label: 'Shortlists' },
   { href: '/calendar', label: 'Calendar' },
-  { href: '/info', label: 'How It Works' },
+  { href: '/info', label: 'Info' },
   { href: '/profile', label: 'Profile' },
 ];
 
