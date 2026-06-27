@@ -88,6 +88,7 @@ def load(history: pd.DataFrame) -> bool:
         _PRIORS[cur] = {
             "sire": _build_prior_lookup(h, "sire_norm"),
             "damsire": _build_prior_lookup(h, "damsire_norm"),
+            "dam": _build_prior_lookup(h, "dam_norm") if "dam_norm" in h.columns else {},
             "consignor": _build_prior_lookup(h, "consignor_norm"),
         }
         by_year = h.groupby("year")["log_price"].agg(s="sum", c="size").reset_index().sort_values("year")
@@ -107,11 +108,13 @@ def _feature_row(features: dict, priors: dict, cur: str) -> dict:
     sale_year = int(features.get("saleYear") or 0)
     sire_mean, sire_n = _prior(priors["sire"], normalize_entity_name(features.get("sireName")), sale_year)
     ds_mean, ds_n = _prior(priors["damsire"], normalize_entity_name(features.get("damsireName")), sale_year)
+    dam_mean, dam_n = _prior(priors.get("dam", {}), normalize_entity_name(features.get("damName")), sale_year)
     cons_mean, cons_n = _prior(priors["consignor"], normalize_entity_name(features.get("consignorName")), sale_year)
     sess = features.get("sessionNumber")
     return {
         "sire_prior_mean": sire_mean, "sire_prior_count": sire_n,
         "damsire_prior_mean": ds_mean, "damsire_prior_count": ds_n,
+        "dam_prior_mean": dam_mean, "dam_prior_count": dam_n,
         "consignor_prior_mean": cons_mean, "consignor_prior_count": cons_n,
         "market_prior_mean": _market_prior(cur, sale_year),
         "year": sale_year,
@@ -151,8 +154,14 @@ def predict(features: dict) -> dict | None:
     pm = {qq: float(bundle["price_models"][qq].predict(_frame(row, bundle["price_cols"], cat_levels))[0]) for qq in q}
     vm = {qq: float(bundle["value_models"][qq].predict(_frame(row, bundle["value_cols"], cat_levels))[0]) for qq in q}
 
-    pred_low, pred_high = math.exp(pm[0.25]), math.exp(pm[0.75])
-    est_low, est_high = math.exp(vm[0.25]), math.exp(vm[0.75])
+    # Use inner quantiles (p35/p65) when available (model v2.1+); fall back to
+    # p25/p75 for older model files so old bundles still produce valid output.
+    pred_lo_q = 0.35 if 0.35 in pm else 0.25
+    pred_hi_q = 0.65 if 0.65 in pm else 0.75
+    pred_low, pred_high = math.exp(pm[pred_lo_q]), math.exp(pm[pred_hi_q])
+    val_lo_q = 0.35 if 0.35 in vm else 0.25
+    val_hi_q = 0.65 if 0.65 in vm else 0.75
+    est_low, est_high = math.exp(vm[val_lo_q]), math.exp(vm[val_hi_q])
     support = min(1.0, row["_sire_n"] / 40.0)
     tightness = math.exp(-(pm[0.75] - pm[0.25]))
     confidence = max(0.0, min(1.0, 0.1 + 0.9 * support * tightness))

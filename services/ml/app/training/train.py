@@ -31,14 +31,15 @@ from app.training.features import (
 )
 
 MODELS_DIR = Path(__file__).resolve().parents[2] / "models"
-QUANTILES = [0.10, 0.25, 0.50, 0.75, 0.90]
+QUANTILES = [0.10, 0.25, 0.35, 0.50, 0.65, 0.75, 0.90]
 HOLDOUT_YEARS = [2024, 2025]
 MODEL_FAMILY = "gbm-quantile"
-MODEL_VERSION = "2.0.0"
+MODEL_VERSION = "2.1.0"
 
 # Pedigree-only features for the intrinsic "value" model (no sale context).
 VALUE_NUMERIC = ["sire_prior_mean", "sire_prior_count",
                  "damsire_prior_mean", "damsire_prior_count",
+                 "dam_prior_mean", "dam_prior_count",
                  "market_prior_mean", "year"]
 VALUE_CATEGORICAL = ["sex", "color"]
 

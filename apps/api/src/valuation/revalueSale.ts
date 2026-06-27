@@ -29,6 +29,7 @@ export async function revalueSale(saleId: string): Promise<RevalueResult> {
   for (const hip of hips) {
     const features = {
       sireName: hip.horse.sire?.name ?? null,
+      damName: hip.horse.dam?.name ?? null,
       damsireName: hip.horse.dam?.sire?.name ?? null,
       sessionNumber: hip.sessionNumber ?? null,
       consignorName: hip.consignor?.name ?? null,

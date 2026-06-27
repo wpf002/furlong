@@ -40,10 +40,12 @@ export default function CalendarPage() {
   }, []);
 
   // Group by year (desc); within a year, upcoming first then by start date.
+  // Only show current year and forward — past years belong in Archive.
   const grouped = useMemo(() => {
     if (!sales) return [];
+    const thisYear = new Date().getFullYear();
     const byYear = new Map<number, CalendarSale[]>();
-    for (const s of sales) {
+    for (const s of sales.filter((s) => s.year >= thisYear)) {
       const arr = byYear.get(s.year) ?? [];
       arr.push(s);
       byYear.set(s.year, arr);

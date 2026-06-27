@@ -22,6 +22,7 @@ from dotenv import load_dotenv
 NUMERIC_FEATURES = [
     "sire_prior_mean", "sire_prior_count",
     "damsire_prior_mean", "damsire_prior_count",
+    "dam_prior_mean", "dam_prior_count",
     "consignor_prior_mean", "consignor_prior_count",
     "market_prior_mean",
     "year", "sessionNumber", "hipNumber",
@@ -55,6 +56,7 @@ def load_sold_hips() -> pd.DataFrame:
                yh."sex"                      AS sex,
                yh."color"                    AS color,
                sire."normalizedName"        AS sire_norm,
+               dam."normalizedName"         AS dam_norm,
                dsire."normalizedName"       AS damsire_norm,
                cons."normalizedName"        AS consignor_norm
         FROM "SaleResult" r
@@ -108,10 +110,11 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
     out = df.copy()
     out = out.merge(_prior_stats(df, "sire_norm", "sire"), on=["sire_norm", "year"], how="left")
     out = out.merge(_prior_stats(df, "damsire_norm", "damsire"), on=["damsire_norm", "year"], how="left")
+    out = out.merge(_prior_stats(df, "dam_norm", "dam"), on=["dam_norm", "year"], how="left")
     out = out.merge(_prior_stats(df, "consignor_norm", "consignor"), on=["consignor_norm", "year"], how="left")
     out = out.merge(_market_prior(df), on="year", how="left")
 
-    for c in ("sire_prior_count", "damsire_prior_count", "consignor_prior_count"):
+    for c in ("sire_prior_count", "damsire_prior_count", "dam_prior_count", "consignor_prior_count"):
         out[c] = out[c].fillna(0)
     for c in CATEGORICAL_FEATURES:
         out[c] = out[c].astype("category")
