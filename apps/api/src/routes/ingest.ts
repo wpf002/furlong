@@ -283,6 +283,62 @@ export async function registerIngestRoutes(app: FastifyInstance) {
 
     return { received: body.length, matched, updated, unmatched };
   });
+
+  // Licensed-feed path for SIRE-LEVEL stats (stud fee, avg yearling price,
+  // stakes-winner %, earnings/starter). Populates the SireStats table that the
+  // valuation model's `sire_studfee_log` feature reads. Body: a JSON array of
+  //   { sireName, year, studFeeCents?, avgYearlingCents?, stakesWinnerPct?,
+  //     earningsPerStarterCents? }
+  // Sires are matched by normalizedName; rows upsert on [sireId, year]. This is
+  // the concrete integration point for a BloodHorse/TDN-class sire-stats feed —
+  // once populated, the next retrain lights up the stud-fee feature (the top
+  // missing signal for first-crop sires). Leakage-safety is enforced downstream:
+  // both training and inference only read a sire's stats from STRICTLY earlier
+  // years than the sale.
+  app.post('/ingest/sire-stats', async (req, reply) => {
+    const body = req.body;
+    if (!Array.isArray(body)) {
+      return reply.status(400).send({ error: 'expected a JSON array of sire-stat rows' });
+    }
+    let upserted = 0;
+    let unmatched = 0;
+    const num = (v: unknown) => (typeof v === 'number' && Number.isFinite(v) ? v : null);
+    const cents = (v: unknown) =>
+      v != null && Number.isFinite(Number(v)) ? BigInt(Math.round(Number(v))) : null;
+
+    for (const raw of body as Array<Record<string, unknown>>) {
+      const norm = normalizeEntityName(typeof raw.sireName === 'string' ? raw.sireName : null);
+      const year = typeof raw.year === 'number' ? raw.year : parseInt(String(raw.year ?? ''), 10);
+      if (!norm || !Number.isInteger(year)) {
+        unmatched += 1;
+        continue;
+      }
+      const sires = await prisma.horse.findMany({
+        where: { normalizedName: norm },
+        select: { id: true },
+      });
+      if (sires.length === 0) {
+        unmatched += 1;
+        continue;
+      }
+      const data = {
+        studFeeCents: cents(raw.studFeeCents),
+        avgYearlingCents: cents(raw.avgYearlingCents),
+        stakesWinnerPct: num(raw.stakesWinnerPct),
+        earningsPerStarter: cents(raw.earningsPerStarterCents),
+      };
+      for (const s of sires) {
+        await prisma.sireStats.upsert({
+          where: { sireId_year: { sireId: s.id, year } },
+          update: data,
+          create: { sireId: s.id, year, ...data },
+        });
+        upserted += 1;
+      }
+    }
+
+    return { received: body.length, upserted, unmatched };
+  });
 }
 
 function parseBool(v: string | undefined): boolean {

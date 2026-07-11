@@ -25,6 +25,13 @@ NUMERIC_FEATURES = [
     "dam_prior_mean", "dam_prior_count",
     "consignor_prior_mean", "consignor_prior_count",
     "market_prior_mean",
+    # Licensed-data on-ramp: log stud fee of the sire, as-of a STRICTLY earlier
+    # year (leakage-safe). NaN until the SireStats table is populated by a
+    # licensed feed (POST /ingest/sire-stats) — HistGBM ignores an all-NaN
+    # column, so this is inert today and lights up on the first retrain after a
+    # feed lands. Stud fee is the market's forward price on a sire and is the top
+    # missing signal for first-crop sires (no prior-sales history to lean on).
+    "sire_studfee_log",
     "year", "sessionNumber", "hipNumber",
 ]
 CATEGORICAL_FEATURES = ["sex", "color", "auctionHouse", "saleName"]
@@ -79,6 +86,46 @@ def load_sold_hips() -> pd.DataFrame:
     return df
 
 
+def load_sire_stats() -> pd.DataFrame:
+    """Per-(sire, year) stud fee from the SireStats table, keyed by the sire's
+    normalizedName so it joins to the sold-hip feature table. Returns an empty
+    frame (harmless) when no licensed feed has populated stud fees yet."""
+    import psycopg
+
+    query = """
+        SELECT sire."normalizedName"   AS sire_norm,
+               ss."year"                AS stat_year,
+               ss."studFeeCents"::float8 AS stud_fee_cents
+        FROM "SireStats" ss
+        JOIN "Horse" sire ON sire."id" = ss."sireId"
+        WHERE ss."studFeeCents" IS NOT NULL AND sire."normalizedName" IS NOT NULL
+    """
+    with psycopg.connect(_database_url()) as conn, conn.cursor() as cur:
+        cur.execute(query)
+        cols = [d.name for d in cur.description]
+        rows = cur.fetchall()
+    return pd.DataFrame(rows, columns=cols if rows else ["sire_norm", "stat_year", "stud_fee_cents"])
+
+
+def _attach_studfee(out: pd.DataFrame, stats: pd.DataFrame) -> pd.DataFrame:
+    """Leakage-safe as-of merge: each row gets log(stud fee) from the sire's most
+    recent SireStats year STRICTLY before the sale year. NaN when unknown."""
+    if stats is None or stats.empty:
+        out["sire_studfee_log"] = np.nan
+        return out
+    left = out.reset_index()[["index", "sire_norm", "year"]].dropna(subset=["sire_norm"])
+    left = left.sort_values("year")
+    right = stats.sort_values("stat_year")
+    merged = pd.merge_asof(
+        left, right, left_on="year", right_on="stat_year", by="sire_norm",
+        direction="backward", allow_exact_matches=False,
+    )
+    merged["sire_studfee_log"] = np.where(
+        merged["stud_fee_cents"] > 0, np.log(merged["stud_fee_cents"]), np.nan)
+    out["sire_studfee_log"] = merged.set_index("index")["sire_studfee_log"]
+    return out
+
+
 def _prior_stats(df: pd.DataFrame, key: str, prefix: str) -> pd.DataFrame:
     """For each (key, year), the mean/count of log_price over STRICTLY earlier
     years for that key. Leakage-safe (current year fully excluded)."""
@@ -113,6 +160,7 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
     out = out.merge(_prior_stats(df, "dam_norm", "dam"), on=["dam_norm", "year"], how="left")
     out = out.merge(_prior_stats(df, "consignor_norm", "consignor"), on=["consignor_norm", "year"], how="left")
     out = out.merge(_market_prior(df), on="year", how="left")
+    out = _attach_studfee(out, load_sire_stats())
 
     for c in ("sire_prior_count", "damsire_prior_count", "dam_prior_count", "consignor_prior_count"):
         out[c] = out[c].fillna(0)
