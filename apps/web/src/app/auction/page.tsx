@@ -253,7 +253,7 @@ function AuctionCard({
   const sold = hip.result && hip.result.priceCents != null ? hip.result.priceCents : null;
 
   return (
-    <article className={`min-w-0 flex-1 overflow-hidden rounded-2xl border border-ink/10 bg-paper-50 p-6 shadow-card sm:p-8 ${hip.withdrawn ? 'opacity-60' : ''}`}>
+    <article className={`min-w-0 flex-1 rounded-2xl border border-ink/10 bg-paper-50 p-6 shadow-card sm:p-8 ${hip.withdrawn ? 'opacity-60' : ''}`}>
       <div className="flex items-start justify-between gap-4">
         <div className="flex flex-col">
           <span className="text-[10px] font-medium uppercase tracking-widest text-ink-500">HIP</span>
@@ -279,7 +279,7 @@ function AuctionCard({
         </Link>
       </div>
 
-      <h2 className="mt-5 font-serif text-2xl font-medium leading-snug text-ink-900">
+      <h2 className="mt-5 font-serif text-lg font-medium leading-snug text-ink-900 sm:text-2xl">
         <span>{sire}</span>
         <span className="mx-2 text-brass-500" aria-label="out of">
           ×
