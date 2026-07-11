@@ -27,13 +27,16 @@ export function HipRow({
       : null;
   const isGem =
     hip.valuation?.hiddenGemScore != null && hip.valuation.hiddenGemScore > 0;
+  const isWithdrawn = hip.withdrawn;
 
   return (
     <div
-      className={`group relative rounded-2xl border bg-paper-50 shadow-card transition duration-200 hover:-translate-y-0.5 hover:shadow-cardHover ${
-        isGem
-          ? 'border-brass-400/60 ring-1 ring-brass-400/30'
-          : 'border-ink/10 hover:border-ink/20'
+      className={`group relative overflow-hidden rounded-2xl border bg-paper-50 shadow-card transition duration-200 hover:-translate-y-0.5 hover:shadow-cardHover ${
+        isWithdrawn
+          ? 'border-ink/10 opacity-60'
+          : isGem
+            ? 'border-brass-400/60 ring-1 ring-brass-400/30'
+            : 'border-ink/10 hover:border-ink/20'
       }`}
     >
       {/* Stretched link covers the card for navigation; content sits above with
@@ -73,12 +76,16 @@ export function HipRow({
               </span>
               <span className="italic">{dam}</span>
             </h3>
-            {isGem && (
+            {isWithdrawn ? (
+              <span className="mt-1 inline-flex shrink-0 items-center rounded-full bg-ink/8 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-500 ring-1 ring-ink/15">
+                Withdrawn
+              </span>
+            ) : isGem ? (
               <span className="mt-1 inline-flex shrink-0 items-center gap-1 rounded-full bg-brass-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brass-700 ring-1 ring-brass-400/40">
                 <StarIcon className="h-2.5 w-2.5" />
                 Hidden Gem
               </span>
-            )}
+            ) : null}
           </div>
           {horse.name && (
             <p className="mt-0.5 text-sm font-medium text-ink-600">{horse.name}</p>
@@ -144,9 +151,9 @@ export function HipRow({
                   {formatMoney(soldCents, currency)}
                 </p>
                 {hip.valuation && (
-                  <p className="mt-1.5 whitespace-nowrap text-xs text-ink-500">
+                  <p className="mt-1.5 text-xs text-ink-500">
                     Est.{' '}
-                    <span className="tnum">
+                    <span className="tnum whitespace-nowrap">
                       {formatMoney(hip.valuation.predPriceLowCents, currency)}–
                       {formatMoney(hip.valuation.predPriceHighCents, currency)}
                     </span>

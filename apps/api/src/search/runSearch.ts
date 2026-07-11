@@ -5,6 +5,7 @@ export interface SearchHipOut {
   id: string;
   hipNumber: number;
   sessionNumber: number | null;
+  withdrawn: boolean;
   horse: {
     name: string | null;
     sex: string | null;
@@ -55,7 +56,7 @@ export async function runSearch(query: SearchQuery & { limit?: number }): Promis
   const currency = sale?.currency ?? 'USD';
 
   const hips = await prisma.hip.findMany({
-    where: { saleId },
+    where: { saleId, withdrawn: false },
     include: {
       horse: { include: { sire: true, dam: { include: { sire: true } } } },
       consignor: true,
@@ -182,6 +183,7 @@ export async function runSearch(query: SearchQuery & { limit?: number }): Promis
       id: h.id,
       hipNumber: h.hipNumber,
       sessionNumber: h.sessionNumber,
+      withdrawn: h.withdrawn,
       horse: {
         name: h.horse.name,
         sex: h.horse.sex,

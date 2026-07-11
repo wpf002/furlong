@@ -52,6 +52,7 @@ export interface SearchHip {
   id: string;
   hipNumber: number;
   sessionNumber: number | null;
+  withdrawn: boolean;
   horse: SearchHipHorse;
   consignorName: string | null;
   valuation: Valuation | null;
@@ -80,6 +81,7 @@ export interface DetailHip {
   id: string;
   hipNumber: number;
   sessionNumber: number | null;
+  withdrawn: boolean;
   horse: {
     name: string | null;
     sex: Sex | null;

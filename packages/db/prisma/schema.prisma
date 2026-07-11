@@ -132,6 +132,8 @@ model Hip {
   breederId   String?
   breeder     Breeder?   @relation(fields: [breederId], references: [id])
 
+  withdrawn  Boolean    @default(false) // pulled from the sale before it rings
+
   result     SaleResult?
   valuations Valuation[]
 

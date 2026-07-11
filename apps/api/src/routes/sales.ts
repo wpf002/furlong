@@ -58,6 +58,26 @@ export async function registerSaleRoutes(app: FastifyInstance) {
     });
   });
 
+  // Mark a hip as withdrawn (pulled from the sale before it rings).
+  app.post<{ Params: { hipId: string } }>('/hips/:hipId/withdraw', async (req, reply) => {
+    const hip = await prisma.hip.update({
+      where: { id: req.params.hipId },
+      data: { withdrawn: true },
+      select: { id: true, hipNumber: true, withdrawn: true },
+    });
+    return hip;
+  });
+
+  // Reinstate a previously withdrawn hip.
+  app.post<{ Params: { hipId: string } }>('/hips/:hipId/reinstate', async (req, reply) => {
+    const hip = await prisma.hip.update({
+      where: { id: req.params.hipId },
+      data: { withdrawn: false },
+      select: { id: true, hipNumber: true, withdrawn: true },
+    });
+    return hip;
+  });
+
   // 1d — Re-value all hips in a sale via the ML service.
   app.post<{ Params: { id: string } }>('/sales/:id/revalue', async (req) => {
     return revalueSale(req.params.id);

@@ -253,7 +253,7 @@ function AuctionCard({
   const sold = hip.result && hip.result.priceCents != null ? hip.result.priceCents : null;
 
   return (
-    <article className="min-w-0 flex-1 rounded-2xl border border-ink/10 bg-paper-50 p-6 shadow-card sm:p-8">
+    <article className={`min-w-0 flex-1 overflow-hidden rounded-2xl border border-ink/10 bg-paper-50 p-6 shadow-card sm:p-8 ${hip.withdrawn ? 'opacity-60' : ''}`}>
       <div className="flex items-start justify-between gap-4">
         <div className="flex flex-col">
           <span className="text-[10px] font-medium uppercase tracking-widest text-ink-500">HIP</span>
@@ -263,6 +263,11 @@ function AuctionCard({
           {hip.sessionNumber != null && (
             <span className="mt-2 w-fit rounded-full bg-ink/5 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-ink-500">
               Session {hip.sessionNumber}
+            </span>
+          )}
+          {hip.withdrawn && (
+            <span className="mt-2 w-fit rounded-full bg-ink/8 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-500 ring-1 ring-ink/15">
+              Withdrawn
             </span>
           )}
         </div>
