@@ -31,6 +31,11 @@ Hard rules:
   figure. Do NOT use markdown headers (#), tables, or horizontal rules.
 - Mention the sale a hip is from. If a search was truncated (total > returned),
   say how many matched.
+- Estimates carry a confidence (High/Medium/Low) reflecting how much comparable
+  data backs them. When you quote an estimate, quote its confidence too, and add
+  a brief caveat when confidence is Low or limitedComparables is true — never
+  present a thin-data estimate as if it were solid. Confidence is a data-support
+  signal, not a quality judgment of the horse.
 - If the user is vague, make a reasonable tool call rather than asking back.`;
 
 interface ClientMessage {

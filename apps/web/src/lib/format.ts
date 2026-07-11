@@ -1,4 +1,7 @@
 import type { SaleCategory, Sex } from './api';
+// Re-export the confidence label from the shared package so the web badge and
+// Secretariat stay in lockstep on the thresholds.
+export { confidenceLabel } from '@furlong/shared';
 
 // Single source of truth for the valuation disclaimer (shown wherever an
 // estimate appears). Scores pedigree + market comparables only — never physical
@@ -69,9 +72,3 @@ export function nonUsdCurrency(currency: string | null | undefined): string | nu
   return currency;
 }
 
-/** Map a 0..1 confidence into a coarse, honest label. Never invents precision. */
-export function confidenceLabel(confidence: number): 'High' | 'Medium' | 'Low' {
-  if (confidence >= 0.66) return 'High';
-  if (confidence >= 0.33) return 'Medium';
-  return 'Low';
-}

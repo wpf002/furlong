@@ -5,7 +5,7 @@
  * it never sets a number).
  */
 import { prisma } from '@furlong/db';
-import { normalizeEntityName, formatMoney } from '@furlong/shared';
+import { normalizeEntityName, formatMoney, confidenceLabel } from '@furlong/shared';
 import { lookupHelp } from './help.js';
 
 const n = (v: bigint | number | null | undefined): number | null =>
@@ -217,6 +217,11 @@ async function searchHips(input: Record<string, unknown>) {
       estimate: v
         ? `${formatMoney(n(v.predPriceLowCents)!, cur)}–${formatMoney(n(v.predPriceHighCents)!, cur)}`
         : null,
+      // Coarse, honest label (High/Medium/Low) — same thresholds as the web
+      // badge. limitedComparables surfaces the thin-data warning so Secretariat
+      // can caveat rather than over-trust a sparse estimate.
+      confidence: v ? confidenceLabel(v.confidence) : null,
+      limitedComparables: v?.limitedComparables ?? null,
       hiddenGem: v?.hiddenGemScore != null && v.hiddenGemScore > 0,
       breeze: h.breezeTime ?? null,
       raceRecord: h.horse.starts != null ? `${h.horse.starts} starts, ${h.horse.wins ?? 0} wins` : null,

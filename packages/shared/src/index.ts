@@ -189,6 +189,16 @@ export function formatMoney(
   }
 }
 
+/** Map a 0..1 confidence into a coarse, honest label. Never invents precision.
+ *  Single source of truth for the thresholds — shared by the web badge and
+ *  Secretariat, so the label a user reads in the UI matches what the assistant
+ *  says. Kept in lockstep with the confidence formula in the ML service. */
+export function confidenceLabel(confidence: number): 'High' | 'Medium' | 'Low' {
+  if (confidence >= 0.66) return 'High';
+  if (confidence >= 0.33) return 'Medium';
+  return 'Low';
+}
+
 /**
  * Recursively convert BigInt values to numbers so a payload can be JSON
  * serialized (JSON.stringify throws on BigInt). Asserts each value is safe.

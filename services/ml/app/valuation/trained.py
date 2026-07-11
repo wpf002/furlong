@@ -162,7 +162,19 @@ def predict(features: dict) -> dict | None:
     val_lo_q = 0.35 if 0.35 in vm else 0.25
     val_hi_q = 0.65 if 0.65 in vm else 0.75
     est_low, est_high = math.exp(vm[val_lo_q]), math.exp(vm[val_hi_q])
-    support = min(1.0, row["_sire_n"] / 40.0)
+    # Support blends every prior the model actually uses, not just the sire, so a
+    # colt out of a well-documented dam / damsire / consignor isn't under-reported
+    # as low confidence. Sire weighted full; dam and damsire half (secondary
+    # pedigree signal); consignor a third (a market/selection signal, not
+    # pedigree). Counts are leakage-safe (strictly prior sale years). Saturates at
+    # 40 weighted comps, same as the old sire-only rule.
+    eff_n = (
+        row["sire_prior_count"]
+        + 0.5 * row["dam_prior_count"]
+        + 0.5 * row["damsire_prior_count"]
+        + 0.3 * row["consignor_prior_count"]
+    )
+    support = min(1.0, eff_n / 40.0)
     tightness = math.exp(-(pm[0.75] - pm[0.25]))
     confidence = max(0.0, min(1.0, 0.1 + 0.9 * support * tightness))
 
@@ -171,5 +183,5 @@ def predict(features: dict) -> dict | None:
         "predPriceLowCents": _r100(pred_low), "predPriceHighCents": _r100(pred_high),
         "confidence": float(confidence),
         "modelVersion": bundle["version"],
-        "limitedComparables": bool(row["_sire_n"] < 10),
+        "limitedComparables": bool(eff_n < 10),
     }
