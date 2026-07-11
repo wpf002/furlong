@@ -17,6 +17,7 @@ Artifacts + metrics are written to services/ml/models/.
 from __future__ import annotations
 
 import json
+import math
 import time
 from pathlib import Path
 
@@ -34,7 +35,26 @@ MODELS_DIR = Path(__file__).resolve().parents[2] / "models"
 QUANTILES = [0.10, 0.25, 0.35, 0.50, 0.65, 0.75, 0.90]
 HOLDOUT_YEARS = [2024, 2025]
 MODEL_FAMILY = "gbm-quantile"
-MODEL_VERSION = "2.1.0"
+MODEL_VERSION = "2.2.0"
+
+# The band shown to buyers. We display a CALIBRATED 50% interval — "half of
+# comparable yearlings sold between X and Y" — because it's an honest, verifiable
+# claim. p25/p75 is the raw 50% interval; conformal calibration (CQR) nudges the
+# edges so the TRUE coverage matches 50% (raw quantiles systematically
+# under-cover). See services/ml experiments: an uncalibrated p10/p90 covers only
+# ~74% vs the nominal 80%, so the calibration is not cosmetic.
+DISPLAY_LO_Q, DISPLAY_HI_Q, DISPLAY_COV = 0.25, 0.75, 0.50
+
+
+def _cqr_offset(pred_lo: np.ndarray, pred_hi: np.ndarray, y: np.ndarray, cov: float) -> float:
+    """Split-conformal offset for a quantile band. Adding it to each side makes
+    the band's empirical coverage on unseen data ~= `cov`. Computed on the
+    holdout slice (out-of-sample for the fitted models). Can be negative when the
+    raw band over-covers."""
+    e = np.maximum(pred_lo - y, y - pred_hi)
+    n = len(e)
+    k = min(1.0, math.ceil((n + 1) * cov) / n)
+    return float(np.quantile(e, k, method="higher"))
 
 # Pedigree-only features for the intrinsic "value" model (no sale context).
 VALUE_NUMERIC = ["sire_prior_mean", "sire_prior_count",
@@ -97,6 +117,24 @@ def train_one(feat: pd.DataFrame, currency: str, holdout_years: list[int]) -> di
     price_models = _fit_quantiles(train[price_cols], train[TARGET].to_numpy(), CATEGORICAL_FEATURES)
     value_models = _fit_quantiles(train[value_cols], train[TARGET].to_numpy(), VALUE_CATEGORICAL)
 
+    # Conformal offsets for the displayed 50% band, fit on the holdout (out-of-
+    # sample for the models above). 0.0 when there's no holdout to calibrate on —
+    # the band degrades to the raw p25/p75, which is close but slightly optimistic.
+    price_cal = value_cal = 0.0
+    disp_coverage = None
+    if len(test) >= 20:
+        yte_c = test[TARGET].to_numpy()
+        pc = _predict_quantiles(price_models, test[price_cols])
+        vc = _predict_quantiles(value_models, test[value_cols])
+        price_cal = _cqr_offset(pc[DISPLAY_LO_Q], pc[DISPLAY_HI_Q], yte_c, DISPLAY_COV)
+        value_cal = _cqr_offset(vc[DISPLAY_LO_Q], vc[DISPLAY_HI_Q], yte_c, DISPLAY_COV)
+        lo_c, hi_c = pc[DISPLAY_LO_Q] - price_cal, pc[DISPLAY_HI_Q] + price_cal
+        disp_coverage = round(float(np.mean((yte_c >= lo_c) & (yte_c <= hi_c))), 3)
+    display = {
+        "lo_q": DISPLAY_LO_Q, "hi_q": DISPLAY_HI_Q, "target_coverage": DISPLAY_COV,
+        "price_cal": price_cal, "value_cal": value_cal,
+    }
+
     version = f"{MODEL_FAMILY}-{MODEL_VERSION}-{currency}+n{len(train)}"
     metrics: dict = {
         "model": version, "currency": currency,
@@ -119,6 +157,7 @@ def train_one(feat: pd.DataFrame, currency: str, holdout_years: list[int]) -> di
             "baseline_mae_log": round(bmae, 4),
             "improvement_pct": round(100 * (bmae - mmae) / bmae, 1),
             "p10_p90_coverage": round(float(np.mean((yte >= price_pred[0.10]) & (yte <= price_pred[0.90]))), 3),
+            "display_band_coverage": disp_coverage,  # true coverage of the shown 50% band
             "model_beats_baseline": bool(mmae < bmae),
             "by_house": _segment("auctionHouse", test, p50, yte, baseline),
         })
@@ -128,6 +167,7 @@ def train_one(feat: pd.DataFrame, currency: str, holdout_years: list[int]) -> di
         "price_models": price_models, "price_cols": price_cols,
         "value_models": value_models, "value_cols": value_cols,
         "quantiles": QUANTILES, "categorical_features": CATEGORICAL_FEATURES,
+        "display": display,
         "metrics": metrics,
     }
     joblib.dump(bundle, MODELS_DIR / f"valuation_model_{currency}.joblib")

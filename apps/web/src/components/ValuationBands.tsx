@@ -90,13 +90,13 @@ export function ValuationBands({
 
   const bands: Band[] = [
     {
-      label: 'Est. value',
+      label: 'Pedigree value',
       low: valuation.estValueLowCents,
       high: valuation.estValueHighCents,
       className: 'bg-racing-700',
     },
     {
-      label: 'Pred. price',
+      label: 'Likely sale price',
       low: valuation.predPriceLowCents,
       high: valuation.predPriceHighCents,
       className: isGem
@@ -141,6 +141,12 @@ export function ValuationBands({
           {conf} confidence
         </span>
       </div>
+
+      {/* What the band actually means — an honest 50% interval, not a promise of
+          precision. Half of comparable yearlings sold inside it, half outside. */}
+      <p className="text-[11px] leading-relaxed text-ink-500">
+        50% range — half of comparable yearlings sold within it, half outside.
+      </p>
 
       {showDisclaimer && (
         <p className="text-xs italic leading-relaxed text-ink-500">

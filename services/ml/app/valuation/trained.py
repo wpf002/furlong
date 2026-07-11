@@ -154,14 +154,19 @@ def predict(features: dict) -> dict | None:
     pm = {qq: float(bundle["price_models"][qq].predict(_frame(row, bundle["price_cols"], cat_levels))[0]) for qq in q}
     vm = {qq: float(bundle["value_models"][qq].predict(_frame(row, bundle["value_cols"], cat_levels))[0]) for qq in q}
 
-    # Use inner quantiles (p35/p65) when available (model v2.1+); fall back to
-    # p25/p75 for older model files so old bundles still produce valid output.
-    pred_lo_q = 0.35 if 0.35 in pm else 0.25
-    pred_hi_q = 0.65 if 0.65 in pm else 0.75
-    pred_low, pred_high = math.exp(pm[pred_lo_q]), math.exp(pm[pred_hi_q])
-    val_lo_q = 0.35 if 0.35 in vm else 0.25
-    val_hi_q = 0.65 if 0.65 in vm else 0.75
-    est_low, est_high = math.exp(vm[val_lo_q]), math.exp(vm[val_hi_q])
+    # Displayed band is a CALIBRATED 50% interval — "half of comparable yearlings
+    # sold between low and high". Config lives in the bundle (model v2.2+): p25/p75
+    # quantiles plus a conformal offset per family so the true coverage is ~50%.
+    # Older bundles have no "display" key → fall back to raw p25/p75 (offset 0).
+    disp = bundle.get("display", {})
+    lo_q = disp.get("lo_q", 0.25)
+    hi_q = disp.get("hi_q", 0.75)
+    p_cal = disp.get("price_cal", 0.0)
+    v_cal = disp.get("value_cal", 0.0)
+    lo_q = lo_q if lo_q in pm else 0.25
+    hi_q = hi_q if hi_q in pm else 0.75
+    pred_low, pred_high = math.exp(pm[lo_q] - p_cal), math.exp(pm[hi_q] + p_cal)
+    est_low, est_high = math.exp(vm[lo_q] - v_cal), math.exp(vm[hi_q] + v_cal)
     # Support blends every prior the model actually uses, not just the sire, so a
     # colt out of a well-documented dam / damsire / consignor isn't under-reported
     # as low confidence. Sire weighted full; dam and damsire half (secondary
