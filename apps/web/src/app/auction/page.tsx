@@ -4,9 +4,10 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { formatMoney } from '@furlong/shared';
 import { getSales, getSaleHips, type Sale, type DetailHip } from '../../lib/api';
-import { sexColorLabel, nonDefaultCategoryLabel, nonUsdCurrency } from '../../lib/format';
+import { sexColorLabel } from '../../lib/format';
 import { ValuationBands } from '../../components/ValuationBands';
-import { ChevronLeftIcon, ChevronRightIcon, ChevronDownIcon } from '../../components/icons';
+import { SaleSelect } from '../../components/SaleSelect';
+import { ChevronLeftIcon, ChevronRightIcon } from '../../components/icons';
 
 export default function AuctionPage() {
   const [sales, setSales] = useState<Sale[] | null>(null);
@@ -120,30 +121,13 @@ export default function AuctionPage() {
         <label className="block text-[11px] font-semibold uppercase tracking-[0.18em] text-brass-600">
           Sale
         </label>
-        <div className="relative mt-1.5">
-          <select
+        <div className="mt-1.5">
+          <SaleSelect
+            sales={sales ?? []}
             value={saleId}
-            onChange={(e) => setSaleId(e.target.value)}
+            onChange={setSaleId}
             disabled={!sales || sales.length === 0}
-            className="w-full cursor-pointer appearance-none rounded-xl border border-ink/15 bg-paper-50 py-3 pl-4 pr-11 font-serif text-base text-ink-900 shadow-card transition hover:border-brass-400/70 focus:border-racing-600 focus:outline-none focus:ring-2 focus:ring-racing-600/15 disabled:cursor-not-allowed disabled:bg-paper-200/60"
-          >
-            {!sales && <option value="">Loading sales…</option>}
-            {sales?.length === 0 && <option value="">No sales available</option>}
-            {sales?.map((s) => {
-              const cat = nonDefaultCategoryLabel(s.category);
-              const cur = nonUsdCurrency(s.currency);
-              const tags = [cat, cur, (s.hipCount ?? 1) === 0 ? 'Catalog pending' : null].filter(
-                Boolean,
-              );
-              return (
-                <option key={s.id} value={s.id}>
-                  {s.name} ({s.year}) — {s.auctionHouse}
-                  {tags.length ? ` · ${tags.join(' · ')}` : ''}
-                </option>
-              );
-            })}
-          </select>
-          <ChevronDownIcon className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-brass-600" />
+          />
         </div>
       </div>
 

@@ -27,12 +27,17 @@ export async function registerSaleRoutes(app: FastifyInstance) {
           ? { year: { lt: thisYear } }
           : undefined;
 
+    // Upcoming: ascending so the most imminent sale is first, undated future
+    // sales (no date announced yet) fall to the bottom.
+    // Past / all: descending so the most recent year leads.
+    const orderBy =
+      status === 'upcoming'
+        ? [{ year: 'asc' as const }, { startDate: { sort: 'asc' as const, nulls: 'last' as const } }]
+        : [{ year: 'desc' as const }, { startDate: { sort: 'desc' as const, nulls: 'first' as const } }];
+
     const sales = await prisma.sale.findMany({
       where,
-      // Year descending first so 2026 always leads regardless of whether a
-      // startDate has been set. Within a year, dated sales sort newest-first
-      // and undated ones (null) float to the top of that year's group.
-      orderBy: [{ year: 'desc' }, { startDate: { sort: 'desc', nulls: 'first' } }],
+      orderBy,
       include: { _count: { select: { hips: true } } },
     });
     return sales.map(({ _count, ...s }) => ({ ...s, hipCount: _count.hips }));

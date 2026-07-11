@@ -9,19 +9,14 @@ import {
   nonUsdCurrency,
   parseSires,
 } from '../lib/format';
+
 import { Badge } from './Badge';
-import { ChevronDownIcon } from './icons';
+import { SaleSelect } from './SaleSelect';
 
 function isCatalogPending(sale: Sale): boolean {
   return sale.hipCount === 0;
 }
 
-function saleSuffix(sale: Sale): string {
-  const cat = nonDefaultCategoryLabel(sale.category);
-  const cur = nonUsdCurrency(sale.currency);
-  const tags = [cat, cur, isCatalogPending(sale) ? 'Catalog pending' : null].filter(Boolean);
-  return tags.length ? ` · ${tags.join(' · ')}` : '';
-}
 
 export interface SearchSubmit {
   query: SearchQuery;
@@ -85,22 +80,8 @@ export function SearchForm({
     >
       <div>
         <label className={LABEL}>Sale</label>
-        <div className="relative mt-1.5">
-          <select
-            value={saleId}
-            onChange={(e) => setSaleId(e.target.value)}
-            disabled={noSales}
-            className="w-full cursor-pointer appearance-none rounded-xl border border-ink/15 bg-paper-50 py-3 pl-4 pr-11 font-serif text-base text-ink-900 shadow-card transition hover:border-brass-400/70 focus:border-racing-600 focus:outline-none focus:ring-2 focus:ring-racing-600/15 disabled:cursor-not-allowed disabled:bg-paper-200/60"
-          >
-            {noSales && <option value="">No sales available</option>}
-            {sales.map((s) => (
-              <option key={s.id} value={s.id}>
-                {s.name} ({s.year}) — {s.auctionHouse}
-                {saleSuffix(s)}
-              </option>
-            ))}
-          </select>
-          <ChevronDownIcon className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-brass-600" />
+        <div className="mt-1.5">
+          <SaleSelect sales={sales} value={saleId} onChange={setSaleId} disabled={noSales} />
         </div>
         {(selCategory || selCurrency || selPending) && (
           <div className="mt-2 flex flex-wrap items-center gap-2">
