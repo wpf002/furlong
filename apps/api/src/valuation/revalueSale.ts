@@ -24,25 +24,28 @@ export async function revalueSale(saleId: string): Promise<RevalueResult> {
     orderBy: { hipNumber: 'asc' },
   });
 
-  // Licensed-data on-ramp: pull each sire's most recent stud fee STRICTLY before
-  // this sale's year (leakage-safe — mirrors the training feature) and feed it to
-  // the model. One batched query, resolved into an as-of map. Empty until a feed
+  // Licensed-data on-ramp: pull each sire's stats from years STRICTLY before this
+  // sale (leakage-safe — mirrors the training features) and feed them to the
+  // model. One batched query; each stat is resolved to its own most-recent-prior
+  // non-null value (sparse feeds don't blank out siblings). Empty until a feed
   // populates SireStats (POST /ingest/sire-stats), in which case every lookup is
   // null and the model sees NaN, exactly as in training.
   const saleYear = hips[0]?.sale.year ?? new Date().getUTCFullYear();
   const sireIds = [...new Set(hips.map((h) => h.horse.sireId).filter((id): id is string => !!id))];
   const studFeeBySire = new Map<string, number>();
+  const epsBySire = new Map<string, number>();
+  const swpctBySire = new Map<string, number>();
   if (sireIds.length > 0) {
     const stats = await prisma.sireStats.findMany({
-      where: { sireId: { in: sireIds }, year: { lt: saleYear }, studFeeCents: { not: null } },
+      where: { sireId: { in: sireIds }, year: { lt: saleYear } },
       orderBy: { year: 'desc' },
-      select: { sireId: true, studFeeCents: true },
+      select: { sireId: true, studFeeCents: true, earningsPerStarter: true, stakesWinnerPct: true },
     });
-    // orderBy year desc → first row per sire is the most recent prior year.
+    // orderBy year desc → first non-null per (sire, stat) is the most recent prior.
     for (const s of stats) {
-      if (!studFeeBySire.has(s.sireId) && s.studFeeCents != null) {
-        studFeeBySire.set(s.sireId, Number(s.studFeeCents));
-      }
+      if (s.studFeeCents != null && !studFeeBySire.has(s.sireId)) studFeeBySire.set(s.sireId, Number(s.studFeeCents));
+      if (s.earningsPerStarter != null && !epsBySire.has(s.sireId)) epsBySire.set(s.sireId, Number(s.earningsPerStarter));
+      if (s.stakesWinnerPct != null && !swpctBySire.has(s.sireId)) swpctBySire.set(s.sireId, s.stakesWinnerPct);
     }
   }
 
@@ -63,6 +66,8 @@ export async function revalueSale(saleId: string): Promise<RevalueResult> {
       hipNumber: hip.hipNumber,
       currency: hip.sale.currency,
       sireStudFeeCents: hip.horse.sireId ? studFeeBySire.get(hip.horse.sireId) ?? null : null,
+      sireEpsCents: hip.horse.sireId ? epsBySire.get(hip.horse.sireId) ?? null : null,
+      sireStakesPct: hip.horse.sireId ? swpctBySire.get(hip.horse.sireId) ?? null : null,
     };
 
     const res = await request(`${ML_SERVICE_URL}/value`, {

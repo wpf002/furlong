@@ -57,11 +57,11 @@ def _cqr_offset(pred_lo: np.ndarray, pred_hi: np.ndarray, y: np.ndarray, cov: fl
     return float(np.quantile(e, k, method="higher"))
 
 # Pedigree-only features for the intrinsic "value" model (no sale context).
-# sire_studfee_log belongs here too — stud fee IS the market's pedigree signal.
+# Stud fee and results-driven sire quality belong here — they're pure sire merit.
 VALUE_NUMERIC = ["sire_prior_mean", "sire_prior_count",
                  "damsire_prior_mean", "damsire_prior_count",
                  "dam_prior_mean", "dam_prior_count",
-                 "sire_studfee_log",
+                 "sire_studfee_log", "sire_eps_log", "sire_swpct",
                  "market_prior_mean", "year"]
 VALUE_CATEGORICAL = ["sex", "color"]
 

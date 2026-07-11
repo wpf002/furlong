@@ -25,13 +25,17 @@ NUMERIC_FEATURES = [
     "dam_prior_mean", "dam_prior_count",
     "consignor_prior_mean", "consignor_prior_count",
     "market_prior_mean",
-    # Licensed-data on-ramp: log stud fee of the sire, as-of a STRICTLY earlier
-    # year (leakage-safe). NaN until the SireStats table is populated by a
-    # licensed feed (POST /ingest/sire-stats) — HistGBM ignores an all-NaN
-    # column, so this is inert today and lights up on the first retrain after a
-    # feed lands. Stud fee is the market's forward price on a sire and is the top
-    # missing signal for first-crop sires (no prior-sales history to lean on).
-    "sire_studfee_log",
+    # Licensed-data on-ramp (all as-of a STRICTLY earlier year → leakage-safe).
+    # NaN until a feed populates SireStats via POST /ingest/sire-stats — HistGBM
+    # ignores all-NaN columns, so these are inert today and light up on the first
+    # retrain after a feed lands.
+    #   sire_studfee_log — market's forward price on the sire; the top signal for
+    #     first-crop sires (no prior-sales history to lean on).
+    #   sire_eps_log / sire_swpct — RESULTS-driven sire quality: how the sire's
+    #     PROGENY actually ran (earnings per starter, stakes-winner %). An
+    #     independent measure of sire merit vs sire_prior_mean (past prices), it
+    #     de-circularizes pricing for established sires. See docs/can-the-ai-choose.md.
+    "sire_studfee_log", "sire_eps_log", "sire_swpct",
     "year", "sessionNumber", "hipNumber",
 ]
 CATEGORICAL_FEATURES = ["sex", "color", "auctionHouse", "saleName"]
@@ -86,43 +90,61 @@ def load_sold_hips() -> pd.DataFrame:
     return df
 
 
+# SireStats columns the model reads → (feature name, log-transform?). All are
+# populated by a licensed feed via POST /ingest/sire-stats; empty otherwise.
+_SIRE_STAT_COLS = {
+    "stud_fee_cents": ("sire_studfee_log", True),   # market forward price on the sire
+    "eps_cents":      ("sire_eps_log", True),        # progeny earnings per starter
+    "sw_pct":         ("sire_swpct", False),         # progeny stakes-winner fraction
+}
+
+
 def load_sire_stats() -> pd.DataFrame:
-    """Per-(sire, year) stud fee from the SireStats table, keyed by the sire's
-    normalizedName so it joins to the sold-hip feature table. Returns an empty
-    frame (harmless) when no licensed feed has populated stud fees yet."""
+    """Per-(sire, year) stats from the SireStats table, keyed by the sire's
+    normalizedName so they join to the sold-hip feature table. Returns an empty
+    frame (harmless) until a licensed feed populates the table."""
     import psycopg
 
     query = """
-        SELECT sire."normalizedName"   AS sire_norm,
-               ss."year"                AS stat_year,
-               ss."studFeeCents"::float8 AS stud_fee_cents
+        SELECT sire."normalizedName"          AS sire_norm,
+               ss."year"                       AS stat_year,
+               ss."studFeeCents"::float8       AS stud_fee_cents,
+               ss."earningsPerStarter"::float8 AS eps_cents,
+               ss."stakesWinnerPct"::float8    AS sw_pct
         FROM "SireStats" ss
         JOIN "Horse" sire ON sire."id" = ss."sireId"
-        WHERE ss."studFeeCents" IS NOT NULL AND sire."normalizedName" IS NOT NULL
+        WHERE sire."normalizedName" IS NOT NULL
+          AND (ss."studFeeCents" IS NOT NULL
+               OR ss."earningsPerStarter" IS NOT NULL
+               OR ss."stakesWinnerPct" IS NOT NULL)
     """
+    empty_cols = ["sire_norm", "stat_year", "stud_fee_cents", "eps_cents", "sw_pct"]
     with psycopg.connect(_database_url()) as conn, conn.cursor() as cur:
         cur.execute(query)
         cols = [d.name for d in cur.description]
         rows = cur.fetchall()
-    return pd.DataFrame(rows, columns=cols if rows else ["sire_norm", "stat_year", "stud_fee_cents"])
+    return pd.DataFrame(rows, columns=cols if rows else empty_cols)
 
 
-def _attach_studfee(out: pd.DataFrame, stats: pd.DataFrame) -> pd.DataFrame:
-    """Leakage-safe as-of merge: each row gets log(stud fee) from the sire's most
-    recent SireStats year STRICTLY before the sale year. NaN when unknown."""
-    if stats is None or stats.empty:
-        out["sire_studfee_log"] = np.nan
-        return out
-    left = out.reset_index()[["index", "sire_norm", "year"]].dropna(subset=["sire_norm"])
-    left = left.sort_values("year")
-    right = stats.sort_values("stat_year")
-    merged = pd.merge_asof(
-        left, right, left_on="year", right_on="stat_year", by="sire_norm",
-        direction="backward", allow_exact_matches=False,
-    )
-    merged["sire_studfee_log"] = np.where(
-        merged["stud_fee_cents"] > 0, np.log(merged["stud_fee_cents"]), np.nan)
-    out["sire_studfee_log"] = merged.set_index("index")["sire_studfee_log"]
+def _attach_sire_stats(out: pd.DataFrame, stats: pd.DataFrame) -> pd.DataFrame:
+    """Leakage-safe: each row gets the sire's stats from the most recent SireStats
+    year STRICTLY before the sale year. Each stat is merged independently (from
+    its own most-recent non-null year) so sparse feeds don't blank out siblings."""
+    left_base = out.reset_index()[["index", "sire_norm", "year"]].dropna(subset=["sire_norm"]).sort_values("year")
+    for src, (feat, log_it) in _SIRE_STAT_COLS.items():
+        col = stats[["sire_norm", "stat_year", src]].dropna(subset=[src]) if (
+            stats is not None and not stats.empty and src in stats) else None
+        if col is None or col.empty:
+            out[feat] = np.nan
+            continue
+        merged = pd.merge_asof(
+            left_base, col.sort_values("stat_year"),
+            left_on="year", right_on="stat_year", by="sire_norm",
+            direction="backward", allow_exact_matches=False,
+        )
+        vals = merged[src].astype(float)
+        vals = np.where(vals > 0, np.log(vals), np.nan) if log_it else vals
+        out[feat] = pd.Series(vals, index=merged["index"]).reindex(out.index)
     return out
 
 
@@ -160,7 +182,7 @@ def build_features(df: pd.DataFrame) -> pd.DataFrame:
     out = out.merge(_prior_stats(df, "dam_norm", "dam"), on=["dam_norm", "year"], how="left")
     out = out.merge(_prior_stats(df, "consignor_norm", "consignor"), on=["consignor_norm", "year"], how="left")
     out = out.merge(_market_prior(df), on="year", how="left")
-    out = _attach_studfee(out, load_sire_stats())
+    out = _attach_sire_stats(out, load_sire_stats())
 
     for c in ("sire_prior_count", "damsire_prior_count", "dam_prior_count", "consignor_prior_count"):
         out[c] = out[c].fillna(0)

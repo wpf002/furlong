@@ -111,17 +111,20 @@ def _feature_row(features: dict, priors: dict, cur: str) -> dict:
     dam_mean, dam_n = _prior(priors.get("dam", {}), normalize_entity_name(features.get("damName")), sale_year)
     cons_mean, cons_n = _prior(priors["consignor"], normalize_entity_name(features.get("consignorName")), sale_year)
     sess = features.get("sessionNumber")
-    # Stud fee (log) — supplied by the API from the SireStats table, already
+    # Sire stats — supplied by the API from the SireStats table, each already
     # picked as-of a strictly-earlier year (leakage-safe). NaN until a licensed
-    # feed populates it; must match the training feature in features.py.
-    sf = features.get("sireStudFeeCents")
-    studfee_log = math.log(sf) if isinstance(sf, (int, float)) and sf and sf > 0 else math.nan
+    # feed populates them; must match the training features in features.py.
+    def _log_cents(v):
+        return math.log(v) if isinstance(v, (int, float)) and v and v > 0 else math.nan
+    swp = features.get("sireStakesPct")
     return {
         "sire_prior_mean": sire_mean, "sire_prior_count": sire_n,
         "damsire_prior_mean": ds_mean, "damsire_prior_count": ds_n,
         "dam_prior_mean": dam_mean, "dam_prior_count": dam_n,
         "consignor_prior_mean": cons_mean, "consignor_prior_count": cons_n,
-        "sire_studfee_log": studfee_log,
+        "sire_studfee_log": _log_cents(features.get("sireStudFeeCents")),
+        "sire_eps_log": _log_cents(features.get("sireEpsCents")),
+        "sire_swpct": float(swp) if isinstance(swp, (int, float)) else math.nan,
         "market_prior_mean": _market_prior(cur, sale_year),
         "year": sale_year,
         "sessionNumber": float(sess) if sess is not None else math.nan,

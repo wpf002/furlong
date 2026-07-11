@@ -85,11 +85,12 @@ A "buy cheap" strategy built on that number walks straight into the missing bust
   relative-value flags — never "this horse will win." Positioning it as a
   winner-picker is a promise the data cannot keep.
 
-## The one results-driven feature that *is* worth building
+## The one results-driven feature that *is* worth building — now built
 
 A racing-results feed can't pick winners, but it can sharpen **pricing** via an
-honest **sire-quality** signal — the natural second feature on the
-[stud-fee on-ramp](../services/ml/app/training/features.py) that already exists.
+honest **sire-quality** signal. This is now wired end-to-end (inert until a feed
+populates `SireStats`), alongside the stud-fee on-ramp in
+[features.py](../services/ml/app/training/features.py).
 
 **What it measures.** A sire's *progeny racing performance* from crops that raced
 in strictly earlier years: **earnings per starter** and **stakes-winner %**.
@@ -106,13 +107,16 @@ yearlings could actually run. A results-derived sire-quality feature is an
 progeny performance, not just prior prices), and pairs with **stud fee** to cover
 first-crop sires that have no history at all.
 
-**How it wires in (≈ the stud-fee pattern, already built).**
-1. Feed populates `SireStats.earningsPerStarter` / `stakesWinnerPct` via
-   `POST /ingest/sire-stats` (endpoint already accepts these fields).
-2. Add leakage-safe features `sire_eps_log` (log earnings per starter) and
-   `sire_swpct` in `features.py` via the same as-of-strictly-earlier-year merge
-   used for stud fee, and to the inference path in `revalueSale.ts` / `trained.py`.
-3. Retrain — the features light up automatically, exactly like stud fee.
+**How it works (built; ≈ the stud-fee pattern).**
+1. A feed populates `SireStats.earningsPerStarter` / `stakesWinnerPct` via
+   `POST /ingest/sire-stats` (endpoint accepts these fields).
+2. Leakage-safe features `sire_eps_log` (log earnings per starter) and
+   `sire_swpct` are built in `features.py` via a per-stat as-of-strictly-earlier-
+   year merge, and passed through the inference path (`revalueSale.ts` →
+   `trained.py`). Each stat resolves to its own most-recent non-null prior year,
+   so a sparse feed doesn't blank out siblings.
+3. Until a feed lands, `SireStats` is empty → the features are all-NaN → HistGBM
+   ignores them (verified inert). They light up on the first retrain after a feed.
 
 **Honest ceiling.** This improves *pricing accuracy*, i.e. how well we match
 market consensus for established sires. It does **not** move the winner-picking
