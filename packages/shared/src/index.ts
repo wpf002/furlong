@@ -232,5 +232,7 @@ export const SearchQuerySchema = z.object({
   budgetHighCents: z.number().int().positive().optional(),
   preferredSires: z.array(z.string()).optional(),
   hiddenGemsOnly: z.boolean().optional(),
+  // Minimum pedigree-grade score (0–100) — filters to hips graded at or above it.
+  minPedigreeScore: z.number().int().min(0).max(100).optional(),
 });
 export type SearchQuery = z.infer<typeof SearchQuerySchema>;

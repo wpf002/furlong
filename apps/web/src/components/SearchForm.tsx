@@ -45,6 +45,7 @@ export function SearchForm({
   const [budgetLow, setBudgetLow] = useState('');
   const [budgetHigh, setBudgetHigh] = useState('');
   const [sires, setSires] = useState('');
+  const [minGrade, setMinGrade] = useState(''); // '' = any; otherwise a min score threshold
 
   useEffect(() => {
     onSaleChange?.(saleId);
@@ -58,6 +59,7 @@ export function SearchForm({
     if (high !== undefined && high > 0) q.budgetHighCents = high;
     const preferred = parseSires(sires);
     if (preferred.length) q.preferredSires = preferred;
+    if (minGrade) q.minPedigreeScore = Number(minGrade);
     return q;
   }
 
@@ -132,6 +134,23 @@ export function SearchForm({
           className={FIELD}
         />
         <p className="mt-1.5 text-xs text-ink-500">Comma-separated.</p>
+      </div>
+
+      <div>
+        <label className={LABEL}>Minimum Pedigree Grade</label>
+        <select
+          value={minGrade}
+          onChange={(e) => setMinGrade(e.target.value)}
+          className={FIELD}
+        >
+          <option value="">Any grade</option>
+          <option value="90">A+ only</option>
+          <option value="83">A &amp; up</option>
+          <option value="75">B+ &amp; up</option>
+          <option value="68">B &amp; up</option>
+          <option value="60">C &amp; up</option>
+        </select>
+        <p className="mt-1.5 text-xs text-ink-500">Black-type strength of the page.</p>
       </div>
 
       <div className="border-t border-ink/10 pt-5">

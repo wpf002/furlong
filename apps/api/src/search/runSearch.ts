@@ -52,7 +52,8 @@ export interface SearchResult {
  * pre-filter a 3,000-hip catalog to a top 50).
  */
 export async function runSearch(query: SearchQuery & { limit?: number }): Promise<SearchResult> {
-  const { saleId, budgetLowCents, budgetHighCents, preferredSires, hiddenGemsOnly, limit } = query;
+  const { saleId, budgetLowCents, budgetHighCents, preferredSires, hiddenGemsOnly, minPedigreeScore, limit } =
+    query;
 
   const sale = await prisma.sale.findUnique({ where: { id: saleId }, select: { currency: true } });
   const currency = sale?.currency ?? 'USD';
@@ -92,6 +93,10 @@ export async function runSearch(query: SearchQuery & { limit?: number }): Promis
     }
     if (hiddenGemsOnly) {
       if (!v || v.hiddenGemScore == null || v.hiddenGemScore <= 0) return false;
+    }
+    if (minPedigreeScore != null) {
+      const g = computePedigreeGrade(h.catalogPageText);
+      if (!g || g.score < minPedigreeScore) return false;
     }
     return true;
   });
