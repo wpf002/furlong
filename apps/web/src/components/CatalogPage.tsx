@@ -75,7 +75,7 @@ export function CatalogPage({ text }: { text: string }) {
 
       {dams.length > 0 && (
         <div className="mt-8">
-          <h3 className="font-serif text-lg text-ink-900">Female Family</h3>
+          <h3 className="font-serif text-lg text-ink-900">Dam</h3>
           <div className="mt-4 space-y-7">
             {dams.map((d) => (
               <div key={d.label} className="border-l-2 border-brass-400/50 pl-4">
