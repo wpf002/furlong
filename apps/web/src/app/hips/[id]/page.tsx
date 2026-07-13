@@ -3,6 +3,7 @@ import { getSaleHips, getSales, type DetailHip, type Valuation } from '../../../
 import { sexColorLabel, VALUATION_DISCLAIMER } from '../../../lib/format';
 import { ValuationBands } from '../../../components/ValuationBands';
 import { PedigreeBrief } from '../../../components/PedigreeBrief';
+import { CatalogPage } from '../../../components/CatalogPage';
 import { SaveToShortlist } from '../../../components/SaveToShortlist';
 import { StarIcon } from '../../../components/icons';
 import { formatMoney } from '@furlong/shared';
@@ -163,22 +164,7 @@ export default async function HipDetailPage({
         )}
       </section>
 
-      {hip.catalogPageText && (
-        <section className="mt-6 rounded-2xl border border-ink/10 bg-paper-50 p-6 shadow-card">
-          <h2 className="font-serif text-lg text-ink-900">Catalog page</h2>
-          <p className="mt-1 text-[11px] uppercase tracking-wide text-ink-500">
-            The official sales-catalog black-type page
-          </p>
-          {/* Monospace + preserved whitespace so the pedigree-tree columns from
-              the catalog's `-layout` extraction stay aligned; x-scroll on narrow
-              screens since the page is wider than a phone. */}
-          <div className="mt-4 max-h-[36rem] overflow-auto border-t border-ink/10 pt-4">
-            <pre className="whitespace-pre font-mono text-[11px] leading-relaxed text-ink-800">
-              {hip.catalogPageText}
-            </pre>
-          </div>
-        </section>
-      )}
+      {hip.catalogPageText && <CatalogPage text={hip.catalogPageText} />}
 
       <PedigreeBrief hipId={hip.id} />
 
