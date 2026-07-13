@@ -1,42 +1,14 @@
 'use client';
 
-import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { normalizeEntityName } from '@furlong/shared';
-import type { BuyerProfile, Sale, SearchHip } from '../lib/api';
+import type { Sale, SearchHip } from '../lib/api';
 import { search } from '../lib/api';
-import { isNotSignedIn, useUser } from '../lib/useUser';
 import { VALUATION_DISCLAIMER } from '../lib/format';
 import { SearchForm, type SearchSubmit } from './SearchForm';
 import { HipRow } from './HipRow';
 import { StarIcon } from './icons';
 
 const PAGE = 20;
-
-// A hip matches the buyer's profile when its sire is preferred (or no sires are
-// set) AND its predicted band overlaps the budget (or no budget is set).
-function matchesProfile(hip: SearchHip, profile: BuyerProfile): boolean {
-  const prefs = (profile.preferredSires ?? [])
-    .map((s) => normalizeEntityName(s))
-    .filter(Boolean) as string[];
-  if (prefs.length > 0) {
-    const sire = normalizeEntityName(hip.horse.sireName);
-    if (!sire || !prefs.includes(sire)) return false;
-  }
-  const lo = profile.budgetLowCents;
-  const hi = profile.budgetHighCents;
-  if (lo != null || hi != null) {
-    const v = hip.valuation;
-    const sold =
-      hip.result && !hip.result.rna && hip.result.priceCents != null ? hip.result.priceCents : null;
-    const bandLo = v ? v.predPriceLowCents : sold;
-    const bandHi = v ? v.predPriceHighCents : sold;
-    if (bandLo == null || bandHi == null) return false;
-    if (hi != null && bandLo > hi) return false;
-    if (lo != null && bandHi < lo) return false;
-  }
-  return true;
-}
 
 export function SearchExperience({
   sales,
@@ -53,7 +25,6 @@ export function SearchExperience({
   showGems?: boolean;
   showSave?: boolean;
 }) {
-  const { user, userFetch } = useUser();
   const [hips, setHips] = useState<SearchHip[] | null>(null);
   const [count, setCount] = useState(0);
   const [currency, setCurrency] = useState('USD');
@@ -65,30 +36,10 @@ export function SearchExperience({
   // Client-side filters over the returned list.
   const [text, setText] = useState('');
   const [gemsOnly, setGemsOnly] = useState(false);
-  const [matchesOnly, setMatchesOnly] = useState(false);
   const [shown, setShown] = useState(PAGE);
-
-  const [profile, setProfile] = useState<BuyerProfile | null>(null);
 
   const resultsRef = useRef<HTMLDivElement>(null);
   const justSearched = useRef(false);
-
-  // Load the buyer's profile (for the "My Matches" filter) once signed in.
-  useEffect(() => {
-    if (!user) {
-      setProfile(null);
-      return;
-    }
-    let cancelled = false;
-    userFetch<BuyerProfile>('/me/profile')
-      .then((p) => !cancelled && setProfile(p))
-      .catch((e) => {
-        if (!isNotSignedIn(e) && !cancelled) setProfile(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [user, userFetch]);
 
   const runSearch = useCallback(async (saleId: string, query: Parameters<typeof search>[0]) => {
     justSearched.current = true;
@@ -97,7 +48,6 @@ export function SearchExperience({
     setActiveSaleId(saleId);
     setText('');
     setGemsOnly(false);
-    setMatchesOnly(false);
     setShown(PAGE);
     try {
       const res = await search(query);
@@ -133,7 +83,6 @@ export function SearchExperience({
           setActiveSaleId(s.activeSaleId ?? '');
           setText(s.text ?? '');
           setGemsOnly(!!s.gemsOnly);
-          setMatchesOnly(!!s.matchesOnly);
           setShown(s.shown ?? PAGE);
           return;
         }
@@ -154,12 +103,12 @@ export function SearchExperience({
     try {
       sessionStorage.setItem(
         storageKey,
-        JSON.stringify({ hips, count, currency, activeSaleId, text, gemsOnly, matchesOnly, shown }),
+        JSON.stringify({ hips, count, currency, activeSaleId, text, gemsOnly, shown }),
       );
     } catch {
       /* ignore */
     }
-  }, [hips, count, currency, activeSaleId, text, gemsOnly, matchesOnly, shown]);
+  }, [hips, count, currency, activeSaleId, text, gemsOnly, shown]);
 
   // Scroll to the results after a user-initiated search.
   useEffect(() => {
@@ -173,7 +122,6 @@ export function SearchExperience({
     if (!hips) return [];
     let list = hips;
     if (gemsOnly) list = list.filter((h) => (h.valuation?.hiddenGemScore ?? 0) > 0);
-    if (matchesOnly && profile) list = list.filter((h) => matchesProfile(h, profile));
     const q = text.trim().toLowerCase();
     if (q) {
       list = list.filter((h) =>
@@ -187,7 +135,7 @@ export function SearchExperience({
     // Always present results in catalog order (by hip number), regardless of
     // the search/filter options.
     return [...list].sort((a, b) => a.hipNumber - b.hipNumber);
-  }, [hips, gemsOnly, matchesOnly, profile, text]);
+  }, [hips, gemsOnly, text]);
 
   return (
     <div className="space-y-6">
@@ -259,29 +207,6 @@ export function SearchExperience({
                   Hidden Gems
                 </label>
               )}
-              {user &&
-                (profile ? (
-                  <label
-                    className="flex cursor-pointer items-center gap-1.5 text-xs font-medium text-ink-600"
-                    title="Hips matching your budget and preferred sires"
-                  >
-                    <input
-                      type="checkbox"
-                      checked={matchesOnly}
-                      onChange={(e) => setMatchesOnly(e.target.checked)}
-                      className="h-3.5 w-3.5 rounded border-ink/30 text-brass-500 focus:ring-brass-400/40"
-                    />
-                    My Matches
-                  </label>
-                ) : (
-                  <Link
-                    href="/profile"
-                    className="flex items-center gap-1.5 text-xs font-medium text-ink-500 underline decoration-dotted underline-offset-2 transition hover:text-racing-700"
-                    title="Set your budget and preferred sires to use My Matches"
-                  >
-                    Set up My Matches
-                  </Link>
-                ))}
               <input
                 value={text}
                 onChange={(e) => setText(e.target.value)}
