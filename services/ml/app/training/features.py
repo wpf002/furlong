@@ -44,8 +44,15 @@ TARGET = "log_price"
 
 
 def _database_url() -> str:
-    # features.py -> training -> app -> ml -> services -> <repo root>
-    load_dotenv(Path(__file__).resolve().parents[4] / ".env")
+    # Load the repo-root .env for local dev (features.py -> training -> app -> ml
+    # -> services -> repo root). In deployed environments (Railway, service root =
+    # services/ml) the tree is shallower and DATABASE_URL is already in the
+    # environment, so a failed/missing .env lookup is non-fatal — never let it
+    # crash training (this exact `parents[4]` IndexError broke prod retraining).
+    try:
+        load_dotenv(Path(__file__).resolve().parents[4] / ".env")
+    except Exception:
+        pass
     url = os.environ.get("DATABASE_URL")
     if not url:
         raise RuntimeError("DATABASE_URL not set")
