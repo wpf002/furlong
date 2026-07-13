@@ -49,12 +49,16 @@ export interface SearchHipHorse {
 }
 
 export interface PedigreeGrade {
-  grade: 'A+' | 'A' | 'B+' | 'B' | 'C' | 'D' | 'F';
+  grade: 'A+' | 'A' | 'A-' | 'B+' | 'B' | 'B-' | 'C+' | 'C' | 'C-' | 'D' | 'F';
   score: number;
+  source: 'expert' | 'heuristic';
   g1: number;
   g2: number;
   g3: number;
   listed: number;
+  // Expert-read enrichment (present only when source === 'expert').
+  confidence?: 'High' | 'Medium' | 'Low';
+  note?: string;
 }
 
 export interface SearchHip {
@@ -311,9 +315,7 @@ export interface CompareResponse {
 }
 
 export function getSires(q: string, limit = 20): Promise<SireSuggestion[]> {
-  return request<SireSuggestion[]>(
-    `/sires?q=${encodeURIComponent(q)}&limit=${limit}`,
-  );
+  return request<SireSuggestion[]>(`/sires?q=${encodeURIComponent(q)}&limit=${limit}`);
 }
 
 export function getCompare(sire: string): Promise<CompareResponse> {

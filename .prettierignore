@@ -1,0 +1,3 @@
+# Generated from source spreadsheets — one record per line by design; Prettier
+# would explode each into a multi-line object. Edit the generator, not the rows.
+apps/api/src/data/ftJuly2026Pedigree.ts

@@ -5,7 +5,7 @@ import { revalueSale } from '../valuation/revalueSale.js';
 import { valuateBroodmareSale } from '../valuation/broodmare.js';
 import { valuateRacingAgeSale } from '../valuation/racingAge.js';
 import { valueSaleByCategory } from '../valuation/dispatch.js';
-import { computePedigreeGrade } from '../pedigreeGrade.js';
+import { computePedigreeGrade, pedigreeGradeForHip } from '../pedigreeGrade.js';
 
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL ?? 'http://localhost:8000';
 
@@ -33,8 +33,14 @@ export async function registerSaleRoutes(app: FastifyInstance) {
     // Past / all: descending so the most recent year leads.
     const orderBy =
       status === 'upcoming'
-        ? [{ year: 'asc' as const }, { startDate: { sort: 'asc' as const, nulls: 'last' as const } }]
-        : [{ year: 'desc' as const }, { startDate: { sort: 'desc' as const, nulls: 'first' as const } }];
+        ? [
+            { year: 'asc' as const },
+            { startDate: { sort: 'asc' as const, nulls: 'last' as const } },
+          ]
+        : [
+            { year: 'desc' as const },
+            { startDate: { sort: 'desc' as const, nulls: 'first' as const } },
+          ];
 
     const sales = await prisma.sale.findMany({
       where,
@@ -46,6 +52,10 @@ export async function registerSaleRoutes(app: FastifyInstance) {
 
   // Hips for a sale, with horse + latest valuation + pedigree grade.
   app.get<{ Params: { id: string } }>('/sales/:id/hips', async (req) => {
+    const sale = await prisma.sale.findUnique({
+      where: { id: req.params.id },
+      select: { auctionHouse: true, name: true, year: true },
+    });
     const hips = await prisma.hip.findMany({
       where: { saleId: req.params.id },
       include: {
@@ -57,7 +67,19 @@ export async function registerSaleRoutes(app: FastifyInstance) {
       },
       orderBy: { hipNumber: 'asc' },
     });
-    return hips.map((h) => ({ ...h, pedigreeGrade: computePedigreeGrade(h.catalogPageText) }));
+    return hips.map((h) => ({
+      ...h,
+      pedigreeGrade: sale
+        ? pedigreeGradeForHip({
+            auctionHouse: sale.auctionHouse,
+            saleName: sale.name,
+            year: sale.year,
+            hipNumber: h.hipNumber,
+            sireName: h.horse.sire?.name ?? null,
+            catalogPageText: h.catalogPageText,
+          })
+        : computePedigreeGrade(h.catalogPageText),
+    }));
   });
 
   // Mark a hip as withdrawn (pulled from the sale before it rings).

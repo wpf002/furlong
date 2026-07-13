@@ -3,12 +3,7 @@
 import { useEffect, useState } from 'react';
 import type { SearchQuery } from '@furlong/shared';
 import type { Sale } from '../lib/api';
-import {
-  dollarsToCents,
-  nonDefaultCategoryLabel,
-  nonUsdCurrency,
-  parseSires,
-} from '../lib/format';
+import { dollarsToCents, nonDefaultCategoryLabel, nonUsdCurrency, parseSires } from '../lib/format';
 
 import { Badge } from './Badge';
 import { SaleSelect } from './SaleSelect';
@@ -16,7 +11,6 @@ import { SaleSelect } from './SaleSelect';
 function isCatalogPending(sale: Sale): boolean {
   return sale.hipCount === 0;
 }
-
 
 export interface SearchSubmit {
   query: SearchQuery;
@@ -94,8 +88,8 @@ export function SearchForm({
         )}
         {selPending && (
           <p className="mt-2 text-xs text-ink-500">
-            This sale is on the calendar, but its catalog hasn’t been published yet — no
-            HIP&apos;s to search until it drops.
+            This sale is on the calendar, but its catalog hasn’t been published yet — no HIP&apos;s
+            to search until it drops.
           </p>
         )}
       </div>
@@ -138,19 +132,15 @@ export function SearchForm({
 
       <div>
         <label className={LABEL}>Minimum Pedigree Grade</label>
-        <select
-          value={minGrade}
-          onChange={(e) => setMinGrade(e.target.value)}
-          className={FIELD}
-        >
+        <select value={minGrade} onChange={(e) => setMinGrade(e.target.value)} className={FIELD}>
           <option value="">Any grade</option>
-          <option value="90">A+ only</option>
-          <option value="83">A &amp; up</option>
+          <option value="80">A- &amp; up</option>
           <option value="75">B+ &amp; up</option>
-          <option value="68">B &amp; up</option>
-          <option value="60">C &amp; up</option>
+          <option value="70">B &amp; up</option>
+          <option value="65">B- &amp; up</option>
+          <option value="60">C+ &amp; up</option>
         </select>
-        <p className="mt-1.5 text-xs text-ink-500">Black-type strength of the page.</p>
+        <p className="mt-1.5 text-xs text-ink-500">Overall pedigree strength.</p>
       </div>
 
       <div className="border-t border-ink/10 pt-5">

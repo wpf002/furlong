@@ -1,6 +1,6 @@
 import { normalizeEntityName, formatMoney, centsToNumber, type SearchQuery } from '@furlong/shared';
 import { prisma } from '@furlong/db';
-import { computePedigreeGrade, type PedigreeGrade } from '../pedigreeGrade.js';
+import { pedigreeGradeForHip, type PedigreeGrade } from '../pedigreeGrade.js';
 
 export interface SearchHipOut {
   id: string;
@@ -52,11 +52,39 @@ export interface SearchResult {
  * pre-filter a 3,000-hip catalog to a top 50).
  */
 export async function runSearch(query: SearchQuery & { limit?: number }): Promise<SearchResult> {
-  const { saleId, budgetLowCents, budgetHighCents, preferredSires, hiddenGemsOnly, minPedigreeScore, limit } =
-    query;
+  const {
+    saleId,
+    budgetLowCents,
+    budgetHighCents,
+    preferredSires,
+    hiddenGemsOnly,
+    minPedigreeScore,
+    limit,
+  } = query;
 
-  const sale = await prisma.sale.findUnique({ where: { id: saleId }, select: { currency: true } });
+  const sale = await prisma.sale.findUnique({
+    where: { id: saleId },
+    select: { currency: true, auctionHouse: true, name: true, year: true },
+  });
   const currency = sale?.currency ?? 'USD';
+
+  // Best available pedigree grade for a hip (expert read where held, else the
+  // black-type heuristic). Requires the sale identity, so it's built here.
+  const gradeFor = (h: {
+    hipNumber: number;
+    catalogPageText: string | null;
+    horse: { sire: { name: string | null } | null };
+  }) =>
+    sale
+      ? pedigreeGradeForHip({
+          auctionHouse: sale.auctionHouse,
+          saleName: sale.name,
+          year: sale.year,
+          hipNumber: h.hipNumber,
+          sireName: h.horse.sire?.name ?? null,
+          catalogPageText: h.catalogPageText,
+        })
+      : null;
 
   const hips = await prisma.hip.findMany({
     where: { saleId, withdrawn: false },
@@ -95,7 +123,7 @@ export async function runSearch(query: SearchQuery & { limit?: number }): Promis
       if (!v || v.hiddenGemScore == null || v.hiddenGemScore <= 0) return false;
     }
     if (minPedigreeScore != null) {
-      const g = computePedigreeGrade(h.catalogPageText);
+      const g = gradeFor(h);
       if (!g || g.score < minPedigreeScore) return false;
     }
     return true;
@@ -205,7 +233,7 @@ export async function runSearch(query: SearchQuery & { limit?: number }): Promis
       produce,
       racing,
       breeze: h.breezeTime ?? null,
-      pedigreeGrade: computePedigreeGrade(h.catalogPageText),
+      pedigreeGrade: gradeFor(h),
       oneLiner,
     };
   });
