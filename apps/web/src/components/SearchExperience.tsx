@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { normalizeEntityName } from '@furlong/shared';
 import type { BuyerProfile, Sale, SearchHip } from '../lib/api';
@@ -258,21 +259,29 @@ export function SearchExperience({
                   Hidden Gems
                 </label>
               )}
-              {user && (
-                <label
-                  className="flex cursor-pointer items-center gap-1.5 text-xs font-medium text-ink-600"
-                  title={profile ? 'Hips matching your budget and preferred sires' : 'Set a profile to use this'}
-                >
-                  <input
-                    type="checkbox"
-                    checked={matchesOnly}
-                    disabled={!profile}
-                    onChange={(e) => setMatchesOnly(e.target.checked)}
-                    className="h-3.5 w-3.5 rounded border-ink/30 text-brass-500 focus:ring-brass-400/40 disabled:opacity-40"
-                  />
-                  My Matches
-                </label>
-              )}
+              {user &&
+                (profile ? (
+                  <label
+                    className="flex cursor-pointer items-center gap-1.5 text-xs font-medium text-ink-600"
+                    title="Hips matching your budget and preferred sires"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={matchesOnly}
+                      onChange={(e) => setMatchesOnly(e.target.checked)}
+                      className="h-3.5 w-3.5 rounded border-ink/30 text-brass-500 focus:ring-brass-400/40"
+                    />
+                    My Matches
+                  </label>
+                ) : (
+                  <Link
+                    href="/profile"
+                    className="flex items-center gap-1.5 text-xs font-medium text-ink-500 underline decoration-dotted underline-offset-2 transition hover:text-racing-700"
+                    title="Set your budget and preferred sires to use My Matches"
+                  >
+                    Set up My Matches
+                  </Link>
+                ))}
               <input
                 value={text}
                 onChange={(e) => setText(e.target.value)}
