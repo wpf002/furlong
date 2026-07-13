@@ -103,10 +103,13 @@ export interface DetailHip {
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   let res: Response;
   try {
+    // Only set a JSON content-type when there's a body — a bodyless request with
+    // content-type: application/json trips Fastify (FST_ERR_CTP_EMPTY_JSON_BODY).
+    const hasBody = init?.body != null;
     res = await fetch(`${API_BASE}${path}`, {
       ...init,
       headers: {
-        'Content-Type': 'application/json',
+        ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
         ...(init?.headers ?? {}),
       },
       cache: 'no-store',

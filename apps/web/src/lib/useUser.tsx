@@ -98,10 +98,14 @@ export function UserProvider({ children }: { children: ReactNode }) {
       }
       let res: Response;
       try {
+        // Only declare a JSON content-type when we're actually sending a body.
+        // A bodyless request (e.g. DELETE) with content-type: application/json
+        // trips Fastify's empty-body guard (FST_ERR_CTP_EMPTY_JSON_BODY).
+        const hasBody = init?.body != null;
         res = await fetch(`${API_BASE}${path}`, {
           ...init,
           headers: {
-            'Content-Type': 'application/json',
+            ...(hasBody ? { 'Content-Type': 'application/json' } : {}),
             Authorization: `Bearer ${current.token}`,
             ...(init?.headers ?? {}),
           },
