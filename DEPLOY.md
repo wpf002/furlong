@@ -70,7 +70,17 @@ DISCOVERY_ENABLED = true
 JOBS_ADMIN_TOKEN  = <same as api>
 SELF_API_URL      = http://${{api.RAILWAY_PRIVATE_DOMAIN}}:8080  # reach api's /ingest
 CRON_DISCOVER     = */15 * * * *
+CRON_RETRAIN      = 0 3 * * *    # nightly model retrain + revalue (see below)
 ```
+
+> **Automated retraining.** The worker registers a repeatable `retrain` schedule
+> (`CRON_RETRAIN`, default nightly 03:00 UTC). Each run calls the ML service's
+> `POST /train` — retraining the valuation model on all accumulated results (so
+> new sales' data *and* the catalog-pedigree feature land) — then re-values every
+> upcoming sale so buyers see fresh predictions. Requires `JOBS_ENABLED=true` +
+> Redis (the worker service). Trigger one immediately instead of waiting for the
+> cron with `POST /model/retrain`, or `POST /jobs/run/retrain` with the
+> `x-admin-token` header. Tune the cadence via `CRON_RETRAIN` (BullMQ cron syntax).
 
 ### web  (NEXT_PUBLIC_* is baked at BUILD time — set before first build)
 ```
