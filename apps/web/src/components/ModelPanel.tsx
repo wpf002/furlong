@@ -19,19 +19,19 @@ export function ModelPanel({ data }: { data: ModelMetrics | null }) {
 
   const stats: Array<{ label: string; value: string; sub?: string }> = [
     {
-      label: 'Accuracy vs. baseline',
+      label: 'More accurate',
       value: m.improvement_pct != null ? `+${m.improvement_pct}%` : '—',
-      sub: 'lower error than comparables',
+      sub: 'than a simple average of comparable sales',
     },
     {
-      label: 'Trained on',
+      label: 'Built from',
       value: m.n_results_seen != null ? m.n_results_seen.toLocaleString('en-US') : '—',
-      sub: m.n_sales_seen != null ? `results across ${m.n_sales_seen} sales` : 'results',
+      sub: m.n_sales_seen != null ? `real sale results across ${m.n_sales_seen} auctions` : 'real sale results',
     },
     {
-      label: 'Interval coverage',
+      label: 'Usually on the money',
       value: m.p10_p90_coverage != null ? `${Math.round(m.p10_p90_coverage * 100)}%` : '—',
-      sub: 'actual price within P10–P90',
+      sub: 'of the time the sale price lands in our range',
     },
   ];
 

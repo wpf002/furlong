@@ -32,24 +32,20 @@ export function PedigreeBrief({ hipId }: { hipId: string }) {
   if (!state.loading && (!state.configured || !state.brief)) return null;
 
   return (
-    <section className="mt-6 rounded-2xl border border-brass-400/40 bg-brass-50/40 p-6 shadow-card">
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="font-serif text-lg text-ink-900">Pedigree read</h2>
-        <span className="shrink-0 rounded-full bg-brass-100 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brass-700 ring-1 ring-brass-400/40">
-          Industry context · AI
-        </span>
-      </div>
+    <section className="mt-6 rounded-2xl border border-brass-400/40 bg-brass-50/40 p-6 shadow-card sm:p-8">
+      <h2 className="font-serif text-xl text-ink-900">Pedigree Read</h2>
+      <div className="rule-brass mt-3 max-w-[3.5rem]" />
 
       {state.loading ? (
-        <div className="mt-4 space-y-2">
-          <div className="h-3 w-full animate-pulse rounded bg-ink/10" />
-          <div className="h-3 w-11/12 animate-pulse rounded bg-ink/10" />
-          <div className="h-3 w-4/5 animate-pulse rounded bg-ink/10" />
+        <div className="mt-5 space-y-2.5">
+          <div className="h-3.5 w-full animate-pulse rounded bg-ink/10" />
+          <div className="h-3.5 w-11/12 animate-pulse rounded bg-ink/10" />
+          <div className="h-3.5 w-4/5 animate-pulse rounded bg-ink/10" />
         </div>
       ) : (
         <>
-          <p className="mt-3 text-sm leading-relaxed text-ink-800">{state.brief}</p>
-          <p className="mt-4 border-t border-brass-400/30 pt-3 text-[11px] italic leading-relaxed text-ink-500">
+          <div className="mt-4 space-y-3">{renderBrief(state.brief ?? '')}</div>
+          <p className="mt-5 border-t border-brass-400/30 pt-4 text-xs italic leading-relaxed text-ink-500">
             Qualitative pedigree context from industry knowledge — not verified
             sales data, and separate from the valuation above. Weigh it, don&apos;t
             bank on it.
@@ -58,4 +54,32 @@ export function PedigreeBrief({ hipId }: { hipId: string }) {
       )}
     </section>
   );
+}
+
+// Render the brief as clean prose: drop a leading redundant "**Pedigree Read: …**"
+// title, split into paragraphs, and turn **bold** into real emphasis instead of
+// showing literal asterisks.
+function renderInline(s: string, key: string) {
+  return s.split(/(\*\*[^*]+\*\*)/).map((part, i) =>
+    part.startsWith('**') && part.endsWith('**') ? (
+      <strong key={`${key}-${i}`} className="font-semibold text-ink-900">
+        {part.slice(2, -2)}
+      </strong>
+    ) : (
+      part
+    ),
+  );
+}
+
+function renderBrief(raw: string) {
+  const text = raw.trim().replace(/^\*\*[^*]*\*\*\s*/, ''); // strip leading title
+  return text
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .map((p, i) => (
+      <p key={i} className="text-[15px] leading-7 text-ink-800">
+        {renderInline(p, String(i))}
+      </p>
+    ));
 }
