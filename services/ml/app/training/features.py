@@ -88,6 +88,15 @@ def load_sold_hips() -> pd.DataFrame:
         WHERE r."rna" = false AND r."priceCents" IS NOT NULL AND r."priceCents" > 0
     """
     with psycopg.connect(_database_url()) as conn, conn.cursor() as cur:
+        # Small managed Postgres instances have a tiny /dev/shm; a parallel scan of
+        # this wide 148k-row join tries to allocate a DSM segment and dies with
+        # "could not resize shared memory segment … No space left on device",
+        # which silently drops the model back to the baseline on prod. Force a
+        # serial plan for this one heavy read.
+        try:
+            cur.execute("SET max_parallel_workers_per_gather = 0")
+        except Exception:
+            pass
         cur.execute(query)
         cols = [d.name for d in cur.description]
         rows = cur.fetchall()
