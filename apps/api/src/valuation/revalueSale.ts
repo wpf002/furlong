@@ -1,6 +1,7 @@
 import { request } from 'undici';
 import { prisma, Prisma } from '@furlong/db';
 import { ValuationResponseSchema, numberToCents } from '@furlong/shared';
+import { pedigreeGradeForHip } from '../pedigreeGrade.js';
 
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL ?? 'http://localhost:8000';
 
@@ -43,15 +44,31 @@ export async function revalueSale(saleId: string): Promise<RevalueResult> {
     });
     // orderBy year desc → first non-null per (sire, stat) is the most recent prior.
     for (const s of stats) {
-      if (s.studFeeCents != null && !studFeeBySire.has(s.sireId)) studFeeBySire.set(s.sireId, Number(s.studFeeCents));
-      if (s.earningsPerStarter != null && !epsBySire.has(s.sireId)) epsBySire.set(s.sireId, Number(s.earningsPerStarter));
-      if (s.stakesWinnerPct != null && !swpctBySire.has(s.sireId)) swpctBySire.set(s.sireId, s.stakesWinnerPct);
+      if (s.studFeeCents != null && !studFeeBySire.has(s.sireId))
+        studFeeBySire.set(s.sireId, Number(s.studFeeCents));
+      if (s.earningsPerStarter != null && !epsBySire.has(s.sireId))
+        epsBySire.set(s.sireId, Number(s.earningsPerStarter));
+      if (s.stakesWinnerPct != null && !swpctBySire.has(s.sireId))
+        swpctBySire.set(s.sireId, s.stakesWinnerPct);
     }
   }
 
   let valued = 0;
 
   for (const hip of hips) {
+    // Catalog-pedigree score (0–100): expert read where held, else the black-type
+    // heuristic. The model trains on the same score (services/ml/app/pedigree.py),
+    // so it's a real pricing feature, not just a badge.
+    const pedigreeScore =
+      pedigreeGradeForHip({
+        auctionHouse: hip.sale.auctionHouse,
+        saleName: hip.sale.name,
+        year: hip.sale.year,
+        hipNumber: hip.hipNumber,
+        sireName: hip.horse.sire?.name ?? null,
+        catalogPageText: hip.catalogPageText,
+      })?.score ?? null;
+
     const features = {
       sireName: hip.horse.sire?.name ?? null,
       damName: hip.horse.dam?.name ?? null,
@@ -65,9 +82,10 @@ export async function revalueSale(saleId: string): Promise<RevalueResult> {
       saleName: hip.sale.name,
       hipNumber: hip.hipNumber,
       currency: hip.sale.currency,
-      sireStudFeeCents: hip.horse.sireId ? studFeeBySire.get(hip.horse.sireId) ?? null : null,
-      sireEpsCents: hip.horse.sireId ? epsBySire.get(hip.horse.sireId) ?? null : null,
-      sireStakesPct: hip.horse.sireId ? swpctBySire.get(hip.horse.sireId) ?? null : null,
+      sireStudFeeCents: hip.horse.sireId ? (studFeeBySire.get(hip.horse.sireId) ?? null) : null,
+      sireEpsCents: hip.horse.sireId ? (epsBySire.get(hip.horse.sireId) ?? null) : null,
+      sireStakesPct: hip.horse.sireId ? (swpctBySire.get(hip.horse.sireId) ?? null) : null,
+      pedigreeScore,
     };
 
     const res = await request(`${ML_SERVICE_URL}/value`, {

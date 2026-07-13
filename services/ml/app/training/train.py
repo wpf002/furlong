@@ -35,7 +35,7 @@ MODELS_DIR = Path(__file__).resolve().parents[2] / "models"
 QUANTILES = [0.10, 0.25, 0.35, 0.50, 0.65, 0.75, 0.90]
 HOLDOUT_YEARS = [2024, 2025]
 MODEL_FAMILY = "gbm-quantile"
-MODEL_VERSION = "2.2.0"
+MODEL_VERSION = "2.3.0"  # + catalog-pedigree score feature (price & value models)
 
 # The band shown to buyers. We display a CALIBRATED 50% interval — "half of
 # comparable yearlings sold between X and Y" — because it's an honest, verifiable
@@ -89,6 +89,7 @@ VALUE_NUMERIC = ["sire_prior_mean", "sire_prior_count",
                  "damsire_prior_mean", "damsire_prior_count",
                  "dam_prior_mean", "dam_prior_count",
                  "sire_studfee_log", "sire_eps_log", "sire_swpct",
+                 "pedigree_score",  # catalog black-type score — pure pedigree merit
                  "market_prior_mean", "year"]
 VALUE_CATEGORICAL = ["sex", "color"]
 

@@ -18,6 +18,8 @@ import numpy as np
 import pandas as pd
 from dotenv import load_dotenv
 
+from app.pedigree import pedigree_score
+
 # Columns the model consumes.
 NUMERIC_FEATURES = [
     "sire_prior_mean", "sire_prior_count",
@@ -36,6 +38,12 @@ NUMERIC_FEATURES = [
     #     independent measure of sire merit vs sire_prior_mean (past prices), it
     #     de-circularizes pricing for established sires. See docs/can-the-ai-choose.md.
     "sire_studfee_log", "sire_eps_log", "sire_swpct",
+    # Catalog-pedigree score (0–100) from the black-type page — the same signal
+    # the app grades hips on (app/pedigree.py, ported from pedigreeGrade.ts). It
+    # captures first-dam production and family depth beyond the entity priors.
+    # NaN when a sold hip carries no page text; HistGBM handles the gaps, and the
+    # feature strengthens as page-text coverage grows.
+    "pedigree_score",
     "year", "sessionNumber", "hipNumber",
 ]
 CATEGORICAL_FEATURES = ["sex", "color", "auctionHouse", "saleName"]
@@ -71,6 +79,7 @@ def load_sold_hips() -> pd.DataFrame:
                s."name"                      AS "saleName",
                h."sessionNumber"            AS "sessionNumber",
                h."hipNumber"                AS "hipNumber",
+               h."catalogPageText"          AS catalog_page_text,
                yh."sex"                      AS sex,
                yh."color"                    AS color,
                sire."normalizedName"        AS sire_norm,
@@ -103,6 +112,8 @@ def load_sold_hips() -> pd.DataFrame:
     df = pd.DataFrame(rows, columns=cols)
     df["price_cents"] = df["price_cents"].astype("float64")
     df["log_price"] = np.log(df["price_cents"])
+    # Catalog-pedigree score from the black-type page (NaN where no page text).
+    df["pedigree_score"] = df["catalog_page_text"].map(pedigree_score).astype("float64")
     return df
 
 

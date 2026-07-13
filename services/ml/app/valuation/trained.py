@@ -117,7 +117,9 @@ def _feature_row(features: dict, priors: dict, cur: str) -> dict:
     def _log_cents(v):
         return math.log(v) if isinstance(v, (int, float)) and v and v > 0 else math.nan
     swp = features.get("sireStakesPct")
+    ped = features.get("pedigreeScore")
     return {
+        "pedigree_score": float(ped) if isinstance(ped, (int, float)) else math.nan,
         "sire_prior_mean": sire_mean, "sire_prior_count": sire_n,
         "damsire_prior_mean": ds_mean, "damsire_prior_count": ds_n,
         "dam_prior_mean": dam_mean, "dam_prior_count": dam_n,
