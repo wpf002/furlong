@@ -118,6 +118,7 @@ export async function ingestCatalog(
           // Only overwrite the page text when the source actually supplies it,
           // so a re-ingest without it doesn't wipe a previously-captured page.
           ...(hip.catalogPageText ? { catalogPageText: hip.catalogPageText } : {}),
+          ...(hip.barn ? { barn: hip.barn } : {}),
         },
       });
       updated += 1;
@@ -137,6 +138,7 @@ export async function ingestCatalog(
           breezeTime: hip.breezeTime ?? null,
           breezeSeconds: hip.breezeSeconds ?? null,
           catalogPageText: hip.catalogPageText ?? null,
+          barn: hip.barn ?? null,
         },
       });
       created += 1;

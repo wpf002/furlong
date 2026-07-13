@@ -14,9 +14,7 @@ export const dynamic = 'force-dynamic';
 function Field({ label, value }: { label: string; value: string | null | undefined }) {
   return (
     <div>
-      <dt className="text-[11px] font-semibold uppercase tracking-wide text-ink-500">
-        {label}
-      </dt>
+      <dt className="text-[11px] font-semibold uppercase tracking-wide text-ink-500">{label}</dt>
       <dd className="mt-0.5 text-sm text-ink-900">{value || '—'}</dd>
     </div>
   );
@@ -34,7 +32,9 @@ export default async function HipDetailPage({
 
   // Return the buyer to wherever they opened this hip from (default: Search).
   const fromAuction = from === 'auction';
-  const backHref = fromAuction ? `/auction${saleId ? `?sale=${encodeURIComponent(saleId)}` : ''}` : '/';
+  const backHref = fromAuction
+    ? `/auction${saleId ? `?sale=${encodeURIComponent(saleId)}` : ''}`
+    : '/';
   const backLink = (
     <Link
       href={backHref}
@@ -91,14 +91,12 @@ export default async function HipDetailPage({
   const { horse } = hip;
   // valuations is latest-first per the contract.
   const latest: Valuation | null = hip.valuations?.[0] ?? null;
-  const sold =
-    hip.result && hip.result.priceCents != null ? hip.result.priceCents : null;
+  const sold = hip.result && hip.result.priceCents != null ? hip.result.priceCents : null;
 
   const sire = horse.sire?.name ?? 'Unknown sire';
   const dam = horse.dam?.name ?? 'Unknown dam';
   const meta = sexColorLabel(horse.sex, horse.color);
-  const isGem =
-    latest?.hiddenGemScore != null && latest.hiddenGemScore > 0;
+  const isGem = latest?.hiddenGemScore != null && latest.hiddenGemScore > 0;
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
@@ -134,9 +132,7 @@ export default async function HipDetailPage({
           <span className="mx-2 text-brass-500">×</span>
           <span className="italic">{dam}</span>
         </h1>
-        {horse.name && (
-          <p className="mt-1 text-base font-medium text-ink-600">{horse.name}</p>
-        )}
+        {horse.name && <p className="mt-1 text-base font-medium text-ink-600">{horse.name}</p>}
         {meta && <p className="mt-0.5 text-sm capitalize text-ink-500">{meta}</p>}
       </header>
 
@@ -154,6 +150,7 @@ export default async function HipDetailPage({
           />
           <Field label="Consignor" value={hip.consignor?.name} />
           <Field label="Breeder" value={hip.breeder?.name} />
+          <Field label="Barn" value={hip.barn} />
         </dl>
         {sold != null && (
           <p className="mt-5 border-t border-ink/10 pt-4 text-sm text-ink-700">

@@ -1,6 +1,7 @@
 import { normalizeEntityName, formatMoney, centsToNumber, type SearchQuery } from '@furlong/shared';
 import { prisma } from '@furlong/db';
 import { pedigreeGradeForHip, type PedigreeGrade } from '../pedigreeGrade.js';
+import { expertPedigreeFor } from '../data/ftJuly2026Pedigree.js';
 
 export interface SearchHipOut {
   id: string;
@@ -16,6 +17,7 @@ export interface SearchHipOut {
     damsireName: string | null;
   };
   consignorName: string | null;
+  barn: string | null;
   valuation: {
     estValueLowCents: number;
     estValueHighCents: number;
@@ -85,6 +87,26 @@ export async function runSearch(query: SearchQuery & { limit?: number }): Promis
           catalogPageText: h.catalogPageText,
         })
       : null;
+
+  // Barn from the DB, falling back to a per-sale expert dataset (some sales'
+  // barns live there rather than in the parsed catalog).
+  const barnFor = (h: {
+    hipNumber: number;
+    barn: string | null;
+    horse: { sire: { name: string | null } | null };
+  }) => {
+    if (h.barn) return h.barn;
+    if (!sale) return null;
+    return (
+      expertPedigreeFor({
+        auctionHouse: sale.auctionHouse,
+        saleName: sale.name,
+        year: sale.year,
+        hipNumber: h.hipNumber,
+        sireName: h.horse.sire?.name ?? null,
+      })?.barn ?? null
+    );
+  };
 
   const hips = await prisma.hip.findMany({
     where: { saleId, withdrawn: false },
@@ -228,6 +250,7 @@ export async function runSearch(query: SearchQuery & { limit?: number }): Promis
         damsireName,
       },
       consignorName: h.consignor?.name ?? null,
+      barn: barnFor(h),
       valuation,
       result,
       produce,

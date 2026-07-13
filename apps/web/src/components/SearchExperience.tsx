@@ -38,6 +38,10 @@ export function SearchExperience({
   const [gemsOnly, setGemsOnly] = useState(false);
   const [shown, setShown] = useState(PAGE);
 
+  // The full, UNCONSTRAINED catalog for the active sale. Typing in the filter
+  // searches this whole set — overriding the constrained Search Catalog results.
+  const [catalog, setCatalog] = useState<SearchHip[] | null>(null);
+
   const resultsRef = useRef<HTMLDivElement>(null);
   const justSearched = useRef(false);
 
@@ -110,6 +114,24 @@ export function SearchExperience({
     }
   }, [hips, count, currency, activeSaleId, text, gemsOnly, shown]);
 
+  // Load the full catalog for the active sale (once per sale) so the free-text
+  // filter can search everything, not just the constrained result set.
+  useEffect(() => {
+    if (!activeSaleId) return;
+    let cancelled = false;
+    setCatalog(null);
+    search({ saleId: activeSaleId })
+      .then((res) => {
+        if (!cancelled) setCatalog(res.hips);
+      })
+      .catch(() => {
+        if (!cancelled) setCatalog(null);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [activeSaleId]);
+
   // Scroll to the results after a user-initiated search.
   useEffect(() => {
     if (!loading && hips !== null && justSearched.current) {
@@ -118,14 +140,26 @@ export function SearchExperience({
     }
   }, [loading, hips]);
 
+  const q = text.trim().toLowerCase();
+  const filtering = q.length > 0;
+
   const visible = useMemo(() => {
-    if (!hips) return [];
-    let list = hips;
+    // When the user is typing a filter, it OVERRIDES the constrained Search
+    // Catalog results and searches the whole catalog (name, sire, dam,
+    // consignor, barn, hip #). Otherwise we show the constrained result set.
+    const base = filtering ? (catalog ?? hips ?? []) : (hips ?? []);
+    let list = base;
     if (gemsOnly) list = list.filter((h) => (h.valuation?.hiddenGemScore ?? 0) > 0);
-    const q = text.trim().toLowerCase();
     if (q) {
       list = list.filter((h) =>
-        [h.horse.name, h.horse.sireName, h.horse.damName, h.consignorName, `hip ${h.hipNumber}`]
+        [
+          h.horse.name,
+          h.horse.sireName,
+          h.horse.damName,
+          h.consignorName,
+          `hip ${h.hipNumber}`,
+          h.barn ? `barn ${h.barn}` : null,
+        ]
           .filter(Boolean)
           .join(' ')
           .toLowerCase()
@@ -135,7 +169,11 @@ export function SearchExperience({
     // Always present results in catalog order (by hip number), regardless of
     // the search/filter options.
     return [...list].sort((a, b) => a.hipNumber - b.hipNumber);
-  }, [hips, gemsOnly, text]);
+  }, [hips, catalog, gemsOnly, q, filtering]);
+
+  // With an active text filter the visible list IS the match set (drawn from the
+  // whole catalog); otherwise the constrained search count leads.
+  const displayCount = filtering ? visible.length : count;
 
   return (
     <div className="space-y-6">
@@ -189,10 +227,14 @@ export function SearchExperience({
         <section ref={resultsRef} className="space-y-4">
           <div className="flex flex-col gap-3 border-b border-ink/10 pb-3 sm:flex-row sm:items-center sm:justify-between">
             <h2 className="font-serif text-lg text-ink-900">
-              <span className="tnum font-semibold">{count}</span>{' '}
-              <span className="text-ink-600">{count === 1 ? 'match' : 'matches'}</span>
-              {visible.length !== count && (
-                <span className="text-sm text-ink-500"> · {visible.length} shown</span>
+              <span className="tnum font-semibold">{displayCount}</span>{' '}
+              <span className="text-ink-600">{displayCount === 1 ? 'match' : 'matches'}</span>
+              {filtering ? (
+                <span className="text-sm text-ink-500"> · across the catalog</span>
+              ) : (
+                visible.length !== count && (
+                  <span className="text-sm text-ink-500"> · {visible.length} shown</span>
+                )
               )}
             </h2>
             <div className="flex flex-wrap items-center gap-3">
@@ -210,8 +252,9 @@ export function SearchExperience({
               <input
                 value={text}
                 onChange={(e) => setText(e.target.value)}
-                placeholder="Filter results…"
-                className="w-44 rounded-lg border border-ink/15 bg-paper-50 px-3 py-1.5 text-xs text-ink-900 shadow-sm placeholder:text-ink-500/60 focus:border-racing-600 focus:outline-none focus:ring-2 focus:ring-racing-600/15"
+                placeholder="Sire, consignor, barn, hip #…"
+                title="Searches the whole catalog — name, sire, dam, consignor, barn, or hip number — overriding the filters above."
+                className="w-60 rounded-lg border border-ink/15 bg-paper-50 px-3 py-1.5 text-xs text-ink-900 shadow-sm placeholder:text-ink-500/60 focus:border-racing-600 focus:outline-none focus:ring-2 focus:ring-racing-600/15"
               />
             </div>
           </div>
@@ -220,28 +263,54 @@ export function SearchExperience({
             <p className="-mt-1 flex items-start gap-1.5 text-xs text-ink-500">
               <StarIcon className="mt-0.5 h-3 w-3 shrink-0 text-brass-500" />
               <span>
-                A <span className="font-medium text-brass-700">Hidden Gem</span> is a horse whose
-                pedigree looks worth more than it&apos;s likely to sell for — quiet value that&apos;s
-                easy to miss in a big catalog.
+                A <span className="font-medium text-brass-700">Hidden Gem</span> is a value signal,
+                not a pedigree grade: the model thinks the horse is worth more than it&apos;s likely
+                to sell for. A modest pedigree can still be underpriced — so a Gem and a lower
+                pedigree grade often go together.
               </span>
             </p>
           )}
 
-          {hips.length === 0 ? (
+          {visible.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-ink/15 bg-paper-50 px-4 py-14 text-center">
-              <p className="font-serif text-lg text-ink-700">No HIP&apos;s matched your criteria</p>
-              <p className="mt-1.5 text-sm text-ink-500">Try widening your budget or removing filters.</p>
-            </div>
-          ) : visible.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-ink/15 bg-paper-50 px-4 py-14 text-center">
-              <p className="font-serif text-lg text-ink-700">Nothing left after filtering</p>
-              <p className="mt-1.5 text-sm text-ink-500">No results match the current filters.</p>
+              {filtering ? (
+                <>
+                  <p className="font-serif text-lg text-ink-700">
+                    No catalog matches for “{text.trim()}”
+                  </p>
+                  <p className="mt-1.5 text-sm text-ink-500">
+                    Try a sire, consignor, barn number, or hip number.
+                  </p>
+                </>
+              ) : hips.length === 0 ? (
+                <>
+                  <p className="font-serif text-lg text-ink-700">
+                    No HIP&apos;s matched your criteria
+                  </p>
+                  <p className="mt-1.5 text-sm text-ink-500">
+                    Try widening your budget or removing filters.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <p className="font-serif text-lg text-ink-700">Nothing left after filtering</p>
+                  <p className="mt-1.5 text-sm text-ink-500">
+                    No results match the current filters.
+                  </p>
+                </>
+              )}
             </div>
           ) : (
             <>
               <div className="space-y-4">
                 {visible.slice(0, shown).map((hip) => (
-                  <HipRow key={hip.id} hip={hip} saleId={activeSaleId} currency={currency} showSave={showSave} />
+                  <HipRow
+                    key={hip.id}
+                    hip={hip}
+                    saleId={activeSaleId}
+                    currency={currency}
+                    showSave={showSave}
+                  />
                 ))}
               </div>
               {visible.length > shown && (

@@ -63,6 +63,16 @@ export function SearchForm({
     onSubmit({ query: buildQuery() });
   }
 
+  // Reset every filter back to its default and re-run an unconstrained search
+  // over the whole catalog (SearchExperience clears the text/gem filters too).
+  function clear() {
+    setBudgetLow('');
+    setBudgetHigh('');
+    setSires('');
+    setMinGrade('');
+    if (saleId) onSubmit({ query: { saleId } });
+  }
+
   const noSales = sales.length === 0;
   const selectedSale = sales.find((s) => s.id === saleId);
   const selCategory = nonDefaultCategoryLabel(selectedSale?.category);
@@ -143,13 +153,21 @@ export function SearchForm({
         <p className="mt-1.5 text-xs text-ink-500">Overall pedigree strength.</p>
       </div>
 
-      <div className="border-t border-ink/10 pt-5">
+      <div className="flex items-center gap-3 border-t border-ink/10 pt-5">
         <button
           type="submit"
           disabled={loading || noSales}
           className="rounded-lg bg-racing-800 px-5 py-2.5 text-sm font-semibold tracking-wide text-paper-50 shadow-sm transition hover:bg-racing-700 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {loading ? 'Searching…' : 'Search Catalog'}
+        </button>
+        <button
+          type="button"
+          onClick={clear}
+          disabled={loading || noSales}
+          className="rounded-lg border border-ink/15 bg-paper-50 px-5 py-2.5 text-sm font-semibold text-ink-700 shadow-sm transition hover:border-brass-400 hover:text-ink-900 disabled:cursor-not-allowed disabled:opacity-50"
+        >
+          Clear
         </button>
       </div>
     </form>

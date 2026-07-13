@@ -13,6 +13,9 @@ export const CatalogHipSchema = z.object({
   damsireName: z.string().nullable(),
   consignorName: z.string().nullable(),
   breederName: z.string().nullable(),
+  // Barn assignment printed in the catalog (e.g. "6", "12B"). Optional — many
+  // feeds omit it. Text, since some sales use letters.
+  barn: z.string().nullable().optional(),
   // Full catalog "black-type page" text, when the source carries it (sire
   // summary, dam produce, female family). Optional — most feeds don't yet.
   catalogPageText: z.string().nullable().optional(),
@@ -90,7 +93,8 @@ export type ValuationResponse = z.infer<typeof ValuationResponseSchema>;
 // casing; matching is done on the normalized form.
 // ---------------------------------------------------------------------------
 
-const COUNTRY_SUFFIX = /\s*\((?:IRE|GB|USA|US|FR|GER|CAN|AUS|NZ|JPN|ARG|BRZ|ITY|SAF|CHI|URU)\)\s*$/i;
+const COUNTRY_SUFFIX =
+  /\s*\((?:IRE|GB|USA|US|FR|GER|CAN|AUS|NZ|JPN|ARG|BRZ|ITY|SAF|CHI|URU)\)\s*$/i;
 
 /**
  * Clean a display name: strip a trailing country code like " (GB)" / "(IRE)"

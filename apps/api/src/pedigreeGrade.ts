@@ -76,6 +76,18 @@ export function computePedigreeGrade(text: string | null | undefined): PedigreeG
 
   const score = Math.max(20, Math.min(100, Math.round(30 + sireTop + p1 + p2 + pDeep)));
   const n = (re: RegExp) => (text.match(re) ?? []).length;
+
+  // Confidence in the read from how much the page actually gives us: a proven
+  // sire class plus close-up (1st/2nd-dam) black type reads high; a page with
+  // neither is thin and speculative.
+  const closeUpBlackType = p1 + p2 > 0;
+  const confidence: PedigreeGrade['confidence'] =
+    sireTop > 0 && closeUpBlackType
+      ? 'High'
+      : sireTop === 0 && !closeUpBlackType
+        ? 'Low'
+        : 'Medium';
+
   return {
     grade: gradeForScore(score),
     score,
@@ -84,6 +96,7 @@ export function computePedigreeGrade(text: string | null | undefined): PedigreeG
     g2: n(/\[G2\]/g),
     g3: n(/\[G3\]/g),
     listed: n(/\[L\]|\[LR\]/g),
+    confidence,
   };
 }
 

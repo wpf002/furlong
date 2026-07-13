@@ -38,7 +38,10 @@ export function GradeBadge({ g, size = 'sm' }: { g: PedigreeGrade; size?: 'sm' |
     ]
       .filter(Boolean)
       .join(', ');
-    title = `Pedigree grade ${g.grade} — black type in the family: ${basis || 'none on the page'}`;
+    const conf = g.confidence ? ` (${g.confidence.toLowerCase()} confidence)` : '';
+    title =
+      `Pedigree grade ${g.grade} (score ${g.score})${conf} — black type in the family: ` +
+      `${basis || 'none on the page'}`;
   }
 
   return (

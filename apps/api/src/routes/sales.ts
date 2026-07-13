@@ -6,6 +6,7 @@ import { valuateBroodmareSale } from '../valuation/broodmare.js';
 import { valuateRacingAgeSale } from '../valuation/racingAge.js';
 import { valueSaleByCategory } from '../valuation/dispatch.js';
 import { computePedigreeGrade, pedigreeGradeForHip } from '../pedigreeGrade.js';
+import { expertPedigreeFor } from '../data/ftJuly2026Pedigree.js';
 
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL ?? 'http://localhost:8000';
 
@@ -67,19 +68,32 @@ export async function registerSaleRoutes(app: FastifyInstance) {
       },
       orderBy: { hipNumber: 'asc' },
     });
-    return hips.map((h) => ({
-      ...h,
-      pedigreeGrade: sale
-        ? pedigreeGradeForHip({
+    return hips.map((h) => {
+      const expert = sale
+        ? expertPedigreeFor({
             auctionHouse: sale.auctionHouse,
             saleName: sale.name,
             year: sale.year,
             hipNumber: h.hipNumber,
             sireName: h.horse.sire?.name ?? null,
-            catalogPageText: h.catalogPageText,
           })
-        : computePedigreeGrade(h.catalogPageText),
-    }));
+        : null;
+      return {
+        ...h,
+        // DB barn, falling back to the per-sale expert dataset.
+        barn: h.barn ?? expert?.barn ?? null,
+        pedigreeGrade: sale
+          ? pedigreeGradeForHip({
+              auctionHouse: sale.auctionHouse,
+              saleName: sale.name,
+              year: sale.year,
+              hipNumber: h.hipNumber,
+              sireName: h.horse.sire?.name ?? null,
+              catalogPageText: h.catalogPageText,
+            })
+          : computePedigreeGrade(h.catalogPageText),
+      };
+    });
   });
 
   // Mark a hip as withdrawn (pulled from the sale before it rings).

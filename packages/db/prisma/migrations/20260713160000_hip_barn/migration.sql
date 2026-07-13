@@ -1,0 +1,2 @@
+-- AlterTable
+ALTER TABLE "Hip" ADD COLUMN IF NOT EXISTS "barn" TEXT;

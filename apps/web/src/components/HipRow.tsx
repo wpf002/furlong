@@ -23,11 +23,8 @@ export function HipRow({
   const dam = horse.damName ?? 'Unknown dam';
   const meta = sexColorLabel(horse.sex, horse.color);
   const soldCents =
-    hip.result && !hip.result.rna && hip.result.priceCents != null
-      ? hip.result.priceCents
-      : null;
-  const isGem =
-    hip.valuation?.hiddenGemScore != null && hip.valuation.hiddenGemScore > 0;
+    hip.result && !hip.result.rna && hip.result.priceCents != null ? hip.result.priceCents : null;
+  const isGem = hip.valuation?.hiddenGemScore != null && hip.valuation.hiddenGemScore > 0;
   const isWithdrawn = hip.withdrawn;
 
   return (
@@ -50,98 +47,104 @@ export function HipRow({
       />
       <div className="pointer-events-none relative z-10">
         <div className="flex flex-col gap-5 p-5 sm:flex-row sm:items-stretch">
-        {/* Hip numeral block */}
-        <div className="flex shrink-0 items-start gap-4 sm:flex-col sm:items-center sm:justify-start sm:border-r sm:border-ink/10 sm:pr-5">
-          <div className="flex flex-col items-center">
-            <span className="text-[10px] font-medium uppercase tracking-widest text-ink-500">
-              HIP
-            </span>
-            <span className="tnum font-serif text-4xl font-semibold leading-none text-racing-800">
-              {hip.hipNumber}
-            </span>
-          </div>
-          {hip.sessionNumber != null && (
-            <span className="mt-1 rounded-full bg-ink/5 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-ink-500">
-              Session {hip.sessionNumber}
-            </span>
-          )}
-        </div>
-
-        {/* Headline + metadata */}
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start justify-between gap-3">
-            <h3
-              title={`${sire} × ${dam}`}
-              className="min-w-0 truncate font-serif text-xl font-medium leading-snug text-ink-900"
-            >
-              <span>{sire}</span>
-              <span className="mx-1.5 text-brass-500" aria-label="out of">
-                ×
+          {/* Hip numeral block */}
+          <div className="flex shrink-0 items-start gap-4 sm:flex-col sm:items-center sm:justify-start sm:border-r sm:border-ink/10 sm:pr-5">
+            <div className="flex flex-col items-center">
+              <span className="text-[10px] font-medium uppercase tracking-widest text-ink-500">
+                HIP
               </span>
-              <span className="italic">{dam}</span>
-            </h3>
-            <div className="mt-1 flex shrink-0 items-center gap-1.5">
-              {hip.pedigreeGrade && <GradeBadge g={hip.pedigreeGrade} />}
-              {isWithdrawn ? (
-                <span className="inline-flex items-center rounded-full bg-ink/8 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-500 ring-1 ring-ink/15">
-                  Withdrawn
-                </span>
-              ) : isGem ? (
-                <span className="inline-flex items-center gap-1 rounded-full bg-brass-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brass-700 ring-1 ring-brass-400/40">
-                  <StarIcon className="h-2.5 w-2.5" />
-                  Hidden Gem
-                </span>
-              ) : null}
+              <span className="tnum font-serif text-4xl font-semibold leading-none text-racing-800">
+                {hip.hipNumber}
+              </span>
             </div>
-          </div>
-          {horse.name && (
-            <p className="mt-0.5 truncate text-sm font-medium text-ink-600" title={horse.name}>
-              {horse.name}
-            </p>
-          )}
-          <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-500">
-            {meta && <span className="capitalize">{meta}</span>}
-            {meta && hip.consignorName ? (
-              <span className="text-ink/20">·</span>
-            ) : null}
-            {hip.consignorName && (
-              <span>
-                <span className="text-ink/40">Consignor</span> {hip.consignorName}
+            {hip.sessionNumber != null && (
+              <span className="mt-1 rounded-full bg-ink/5 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-ink-500">
+                Session {hip.sessionNumber}
               </span>
             )}
-          </p>
+          </div>
 
-          {hip.produce && (
-            <p className="mt-1.5 text-xs text-ink-600">
-              <span className="text-ink/40">Produce</span> {hip.produce.nFoals}{' '}
-              {hip.produce.nFoals === 1 ? 'foal' : 'foals'} sold
-              {hip.produce.medianFoalCents != null && (
-                <> · median {formatMoney(hip.produce.medianFoalCents, currency)}</>
+          {/* Headline + metadata */}
+          <div className="min-w-0 flex-1">
+            <div className="flex items-start justify-between gap-3">
+              <h3
+                title={`${sire} × ${dam}`}
+                className="min-w-0 truncate font-serif text-xl font-medium leading-snug text-ink-900"
+              >
+                <span>{sire}</span>
+                <span className="mx-1.5 text-brass-500" aria-label="out of">
+                  ×
+                </span>
+                <span className="italic">{dam}</span>
+              </h3>
+              <div className="mt-1 flex shrink-0 items-center gap-1.5">
+                {hip.pedigreeGrade && <GradeBadge g={hip.pedigreeGrade} />}
+                {isWithdrawn ? (
+                  <span className="inline-flex items-center rounded-full bg-ink/8 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-500 ring-1 ring-ink/15">
+                    Withdrawn
+                  </span>
+                ) : isGem ? (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-brass-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brass-700 ring-1 ring-brass-400/40">
+                    <StarIcon className="h-2.5 w-2.5" />
+                    Hidden Gem
+                  </span>
+                ) : null}
+              </div>
+            </div>
+            {horse.name && (
+              <p className="mt-0.5 truncate text-sm font-medium text-ink-600" title={horse.name}>
+                {horse.name}
+              </p>
+            )}
+            <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-500">
+              {meta && <span className="capitalize">{meta}</span>}
+              {meta && (hip.consignorName || hip.barn) ? (
+                <span className="text-ink/20">·</span>
+              ) : null}
+              {hip.consignorName && (
+                <span>
+                  <span className="text-ink/40">Consignor</span> {hip.consignorName}
+                </span>
+              )}
+              {hip.consignorName && hip.barn ? <span className="text-ink/20">·</span> : null}
+              {hip.barn && (
+                <span>
+                  <span className="text-ink/40">Barn</span> {hip.barn}
+                </span>
               )}
             </p>
-          )}
 
-          {hip.breeze && (
-            <p className="mt-1.5 text-xs text-ink-600">
-              <span className="text-ink/40">Breeze</span>{' '}
-              <span className="tnum font-medium text-racing-800">{hip.breeze}</span>
-            </p>
-          )}
+            {hip.produce && (
+              <p className="mt-1.5 text-xs text-ink-600">
+                <span className="text-ink/40">Produce</span> {hip.produce.nFoals}{' '}
+                {hip.produce.nFoals === 1 ? 'foal' : 'foals'} sold
+                {hip.produce.medianFoalCents != null && (
+                  <> · median {formatMoney(hip.produce.medianFoalCents, currency)}</>
+                )}
+              </p>
+            )}
 
-          {hip.racing && (
-            <p className="mt-1.5 text-xs text-ink-600">
-              <span className="text-ink/40">Race record</span> {hip.racing.starts}{' '}
-              {hip.racing.starts === 1 ? 'start' : 'starts'}, {hip.racing.wins}{' '}
-              {hip.racing.wins === 1 ? 'win' : 'wins'}
-              {hip.racing.earningsCents != null && hip.racing.earningsCents > 0 && (
-                <> · {formatMoney(hip.racing.earningsCents, currency)} earned</>
-              )}
-              {hip.racing.bestSpeedFigure != null && (
-                <> · best fig {hip.racing.bestSpeedFigure}</>
-              )}
-            </p>
-          )}
-        </div>
+            {hip.breeze && (
+              <p className="mt-1.5 text-xs text-ink-600">
+                <span className="text-ink/40">Breeze</span>{' '}
+                <span className="tnum font-medium text-racing-800">{hip.breeze}</span>
+              </p>
+            )}
+
+            {hip.racing && (
+              <p className="mt-1.5 text-xs text-ink-600">
+                <span className="text-ink/40">Race record</span> {hip.racing.starts}{' '}
+                {hip.racing.starts === 1 ? 'start' : 'starts'}, {hip.racing.wins}{' '}
+                {hip.racing.wins === 1 ? 'win' : 'wins'}
+                {hip.racing.earningsCents != null && hip.racing.earningsCents > 0 && (
+                  <> · {formatMoney(hip.racing.earningsCents, currency)} earned</>
+                )}
+                {hip.racing.bestSpeedFigure != null && (
+                  <> · best fig {hip.racing.bestSpeedFigure}</>
+                )}
+              </p>
+            )}
+          </div>
 
           {/* Actual price (settled sales) and/or the model estimate. Save sits
               at the top of this column so it never overlays the figures. */}

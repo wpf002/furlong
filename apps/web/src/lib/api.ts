@@ -69,6 +69,7 @@ export interface SearchHip {
   pedigreeGrade?: PedigreeGrade | null;
   horse: SearchHipHorse;
   consignorName: string | null;
+  barn?: string | null;
   valuation: Valuation | null;
   result: { priceCents: number | null; rna: boolean } | null;
   produce: { nFoals: number; medianFoalCents: number | null } | null;
@@ -96,6 +97,7 @@ export interface DetailHip {
   hipNumber: number;
   sessionNumber: number | null;
   withdrawn: boolean;
+  barn?: string | null;
   catalogPageText?: string | null;
   pedigreeGrade?: PedigreeGrade | null;
   horse: {
