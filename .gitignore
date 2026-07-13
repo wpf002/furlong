@@ -18,6 +18,10 @@ services/ml/models/*.pkl
 services/ml/models/*.txt
 services/ml/models/*.joblib
 services/ml/models/*.json
+# …except the two production model bundles, which ship in the ml image so prod
+# serves the trained model (not the fallback baseline) and survives redeploys.
+!services/ml/models/valuation_model_USD.joblib
+!services/ml/models/valuation_model_GNS.joblib
 # data (raw catalogs/results/feeds are large + may be licensed — keep out of git)
 # Ignore everything under data/ except the tracked .gitkeep placeholders.
 data/*

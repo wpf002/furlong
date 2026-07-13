@@ -1,9 +1,8 @@
-import { Fragment } from 'react';
 import { parseCatalogPage } from '../lib/catalogPage';
 
 // Renders the parsed catalog "black-type page" in the app's theme. Black-type
 // winners (printed in CAPS in the catalog) are emphasized; graded/listed stakes
-// tags become small pills so quality reads at a glance.
+// tags become small inline pills so quality reads at a glance.
 
 const GRADE_STYLE: Record<string, string> = {
   G1: 'bg-brass-100 text-brass-800 ring-1 ring-brass-400/50',
@@ -48,68 +47,49 @@ function rich(text: string, k: string) {
   return nodes;
 }
 
-function Pill({ label, n }: { label: string; n: number }) {
-  if (!n) return null;
-  return (
-    <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${GRADE_STYLE[label] ?? GRADE_STYLE.L}`}>
-      {label} <span className="tnum opacity-70">×{n}</span>
-    </span>
+const ORDINAL: Record<string, string> = { '1': '1st', '2': '2nd', '3': '3rd', '4': '4th', '5': '5th', '6': '6th' };
+const damLabel = (l: string) => `${ORDINAL[l] ?? `${l}th`} Dam`;
+
+// Title-case a short tag while leaving all-caps acronyms (KTDF) intact.
+const titleCase = (s: string) =>
+  s.replace(/\b[\w'’]+\b/g, (w) =>
+    w.length <= 4 && w === w.toUpperCase() ? w : w.charAt(0).toUpperCase() + w.slice(1).toLowerCase(),
   );
-}
 
 export function CatalogPage({ text }: { text: string }) {
   const page = parseCatalogPage(text);
   if (!page) return null;
-  const { sire, dams, engagements, counts } = page;
-  const hasBlackType = counts.g1 + counts.g2 + counts.g3 + counts.listed > 0;
+  const { sire, dams, engagements } = page;
 
   return (
-    <section className="mt-6 rounded-2xl border border-ink/10 bg-paper-50 p-6 shadow-card">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="font-serif text-lg text-ink-900">Catalog page</h2>
-          <p className="mt-0.5 text-[11px] uppercase tracking-wide text-ink-500">
-            Black-type pedigree
-          </p>
-        </div>
-        {hasBlackType && (
-          <div className="flex flex-wrap items-center gap-1.5">
-            <Pill label="G1" n={counts.g1} />
-            <Pill label="G2" n={counts.g2} />
-            <Pill label="G3" n={counts.g3} />
-            <Pill label="L" n={counts.listed} />
-          </div>
-        )}
-      </div>
+    <section className="mt-6 rounded-2xl border border-ink/10 bg-paper-50 p-6 shadow-card sm:p-8">
+      <h2 className="font-serif text-2xl tracking-tightish text-racing-900">Catalog Page</h2>
+      <div className="rule-brass mt-3 max-w-[3.5rem]" />
 
       {sire && (
-        <div className="mt-5">
-          <h3 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brass-600">
-            Sire
-          </h3>
-          <p className="mt-1.5 text-sm leading-relaxed text-ink-700">{rich(sire, 'sire')}</p>
+        <div className="mt-7">
+          <h3 className="font-serif text-lg text-ink-900">Sire</h3>
+          <p className="mt-2 text-[15px] leading-7 text-ink-700">{rich(sire, 'sire')}</p>
         </div>
       )}
 
       {dams.length > 0 && (
-        <div className="mt-6">
-          <h3 className="text-[11px] font-semibold uppercase tracking-[0.18em] text-brass-600">
-            Female family
-          </h3>
-          <div className="mt-2 max-h-[28rem] space-y-4 overflow-y-auto pr-1">
+        <div className="mt-8">
+          <h3 className="font-serif text-lg text-ink-900">Female Family</h3>
+          <div className="mt-4 space-y-7">
             {dams.map((d) => (
-              <div key={d.label} className="border-l-2 border-brass-400/40 pl-3">
-                <div className="flex items-baseline gap-2">
-                  <span className="shrink-0 rounded bg-ink/5 px-1.5 py-0.5 text-[9px] font-semibold uppercase tracking-wide text-ink-500">
-                    {d.label} dam
+              <div key={d.label} className="border-l-2 border-brass-400/50 pl-4">
+                <p className="text-[15px] leading-7 text-ink-900">
+                  <span className="mr-2 align-middle text-[10px] font-semibold uppercase tracking-[0.14em] text-brass-600">
+                    {damLabel(d.label)}
                   </span>
-                  <p className="font-serif text-sm leading-snug text-ink-900">{rich(d.name, `${d.label}-n`)}</p>
-                </div>
+                  {rich(d.name, `${d.label}-n`)}
+                </p>
                 {d.entries.length > 0 && (
-                  <ul className="mt-1.5 space-y-1">
+                  <ul className="mt-2.5 space-y-2">
                     {d.entries.map((e, idx) => (
-                      <li key={idx} className="flex gap-1.5 text-[13px] leading-relaxed text-ink-600">
-                        <span aria-hidden className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-brass-400/60" />
+                      <li key={idx} className="flex gap-2.5 text-[14px] leading-6 text-ink-600">
+                        <span aria-hidden className="mt-[9px] h-1 w-1 shrink-0 rounded-full bg-brass-400/70" />
                         <span>{rich(e, `${d.label}-${idx}`)}</span>
                       </li>
                     ))}
@@ -122,23 +102,17 @@ export function CatalogPage({ text }: { text: string }) {
       )}
 
       {engagements.length > 0 && (
-        <div className="mt-5 flex flex-wrap items-center gap-1.5 border-t border-ink/10 pt-4">
+        <div className="mt-7 flex flex-wrap items-center gap-2 border-t border-ink/10 pt-5">
           {engagements.map((e) => (
-            <span key={e} className="rounded-full bg-racing-700/10 px-2 py-0.5 text-[10px] font-medium text-racing-800">
-              {e}
+            <span
+              key={e}
+              className="rounded-full bg-racing-700/10 px-2.5 py-1 text-xs font-medium text-racing-800"
+            >
+              {titleCase(e)}
             </span>
           ))}
         </div>
       )}
-
-      <details className="mt-4 border-t border-ink/10 pt-3">
-        <summary className="cursor-pointer text-[11px] font-medium uppercase tracking-wide text-ink-500 hover:text-ink-700">
-          View original catalog page
-        </summary>
-        <div className="mt-3 max-h-[32rem] overflow-auto">
-          <pre className="whitespace-pre font-mono text-[11px] leading-relaxed text-ink-700">{text}</pre>
-        </div>
-      </details>
     </section>
   );
 }

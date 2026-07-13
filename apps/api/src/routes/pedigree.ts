@@ -12,6 +12,7 @@
 import type { FastifyInstance } from 'fastify';
 import { request } from 'undici';
 import { prisma } from '@furlong/db';
+import { PEDIGREE_KNOWLEDGE } from '../assistant/pedigreeKnowledge.js';
 
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
 
@@ -28,7 +29,12 @@ HARD RULES:
 - This is qualitative context to COMPLEMENT — never override or restate — Furlong's data-driven valuation. Do not mention or invent prices or values.
 - Be concise, concrete, and genuinely useful. No hedging filler, no "consult an expert" boilerplate, no disclaimers (the UI adds those).
 
-Register to aim for: "By Medaglia d'Oro — a proven source of high-class fillies, so this filly's sex fits his strongest pattern — with a dirt, two-turn profile that favors classic distances over speed. The damsire, Tapit, is among the premier broodmare sires in North America, reinforcing class and stamina. A page that reads better for staying than sprinting."`;
+Register to aim for: "By Medaglia d'Oro — a proven source of high-class fillies, so this filly's sex fits his strongest pattern — with a dirt, two-turn profile that favors classic distances over speed. The damsire, Tapit, is among the premier broodmare sires in North America, reinforcing class and stamina. A page that reads better for staying than sprinting."
+
+Apply the Secretariat Pedigree Intelligence System below — the sire signatures, broodmare-sire influence, sex tendencies, surface/distance heritability, maturity curves, and "hidden angle" logic — to make the read specific and professional rather than generic. Draw on it, but still obey the HARD RULES above (qualitative, no invented numbers, admit when a sire/dam isn't recognized).
+
+═══════════════════════════════════════════════════════════════════════════════
+${PEDIGREE_KNOWLEDGE}`;
 
 // Briefs are stable per (sire, dam, damsire, sex) — cache in memory to avoid
 // repeat model calls. Dev-grade; production would use Redis or a table.
