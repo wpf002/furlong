@@ -28,12 +28,38 @@ field becomes null, never guessed.
 from __future__ import annotations
 
 import re
+import subprocess
 from collections import Counter
 
 import fitz  # pymupdf — preserves this catalog's reading order better than
             # pdfplumber, which scrambles the right-aligned hip number.
 
 HIP_MARKER = "Hip No."
+
+# Layout-page cleanup (footer page-marker like "4-26"; runs of blank lines).
+_PAGE_FOOTER_RE = re.compile(r"^\s*\d{1,2}-\d{2}\s*$", re.M)
+_PAGE_BLANKS_RE = re.compile(r"\n[ \t]*\n[ \t]*\n+")
+
+
+def _clean_page(text: str) -> str:
+    text = _PAGE_FOOTER_RE.sub("", text)
+    text = "\n".join(line.rstrip() for line in text.splitlines())
+    return _PAGE_BLANKS_RE.sub("\n\n", text).strip()
+
+
+def _layout_pages(raw: bytes) -> list[str] | None:
+    """Per-page layout-preserving text via poppler's `pdftotext -layout`, which
+    keeps the pedigree-tree columns and produce-entry indentation that the web's
+    structured catalog-page parser (catalogPage.ts) relies on. Returns None if
+    pdftotext isn't on the PATH — callers then fall back to the fitz block text
+    (still displayable, just less cleanly structured)."""
+    try:
+        res = subprocess.run(
+            ["pdftotext", "-layout", "-", "-"], input=raw, capture_output=True, check=True
+        )
+        return res.stdout.decode("utf-8", "replace").split("\f")
+    except (FileNotFoundError, subprocess.CalledProcessError):
+        return None
 
 # Colors longest-first so multi-word colors win over their prefixes.
 _COLORS = [
@@ -218,12 +244,17 @@ def parse_keeneland_catalog(raw: bytes, filename: str) -> dict:
         doc.close()
 
     blocks = _split_blocks(pages)
+    # Capture each hip's full black-type page verbatim (layout-preserving) so the
+    # app shows the same info as the printed catalog — automatically, at ingest.
+    layout = _layout_pages(raw)
 
     hips: list[dict] = []
     skipped: list[dict] = []
     for page, text in blocks:
         record, reason = _parse_block(text, page)
         if record is not None:
+            page_text = layout[page] if layout and page < len(layout) else text
+            record["catalogPageText"] = _clean_page(page_text)
             hips.append(record)
         else:
             snippet = " ".join(text.split())[:120]

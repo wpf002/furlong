@@ -1,0 +1,5 @@
+# Nixpacks build config for the ML service. poppler-utils provides `pdftotext`,
+# used at catalog ingest to capture each hip's layout-preserving black-type page
+# (falls back to fitz text if absent, so the build won't break without it).
+[phases.setup]
+aptPkgs = ["poppler-utils"]
