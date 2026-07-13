@@ -70,7 +70,10 @@ export function HipRow({
         {/* Headline + metadata */}
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-3">
-            <h3 className="min-w-0 break-words font-serif text-xl font-medium leading-snug text-ink-900">
+            <h3
+              title={`${sire} × ${dam}`}
+              className="min-w-0 truncate font-serif text-xl font-medium leading-snug text-ink-900"
+            >
               <span>{sire}</span>
               <span className="mx-1.5 text-brass-500" aria-label="out of">
                 ×
@@ -92,7 +95,9 @@ export function HipRow({
             </div>
           </div>
           {horse.name && (
-            <p className="mt-0.5 text-sm font-medium text-ink-600">{horse.name}</p>
+            <p className="mt-0.5 truncate text-sm font-medium text-ink-600" title={horse.name}>
+              {horse.name}
+            </p>
           )}
           <p className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-ink-500">
             {meta && <span className="capitalize">{meta}</span>}

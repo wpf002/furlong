@@ -283,14 +283,21 @@ function AuctionCard({
         </div>
       </div>
 
-      <h2 className="mt-5 font-serif text-lg font-medium leading-snug text-ink-900 sm:text-2xl">
+      <h2
+        title={`${sire} × ${dam}`}
+        className="mt-5 truncate font-serif text-lg font-medium leading-snug text-ink-900 sm:text-2xl"
+      >
         <span>{sire}</span>
         <span className="mx-2 text-brass-500" aria-label="out of">
           ×
         </span>
         <span className="italic">{dam}</span>
       </h2>
-      {horse.name && <p className="mt-1 text-sm font-medium text-ink-600">{horse.name}</p>}
+      {horse.name && (
+        <p className="mt-1 truncate text-sm font-medium text-ink-600" title={horse.name}>
+          {horse.name}
+        </p>
+      )}
 
       <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-2 text-xs">
         {meta && (

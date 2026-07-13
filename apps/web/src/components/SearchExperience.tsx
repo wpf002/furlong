@@ -8,6 +8,7 @@ import { isNotSignedIn, useUser } from '../lib/useUser';
 import { VALUATION_DISCLAIMER } from '../lib/format';
 import { SearchForm, type SearchSubmit } from './SearchForm';
 import { HipRow } from './HipRow';
+import { StarIcon } from './icons';
 
 const PAGE = 20;
 
@@ -280,6 +281,17 @@ export function SearchExperience({
               />
             </div>
           </div>
+
+          {showGems && (
+            <p className="-mt-1 flex items-start gap-1.5 text-xs text-ink-500">
+              <StarIcon className="mt-0.5 h-3 w-3 shrink-0 text-brass-500" />
+              <span>
+                A <span className="font-medium text-brass-700">Hidden Gem</span> is a horse whose
+                pedigree looks worth more than it&apos;s likely to sell for — quiet value that&apos;s
+                easy to miss in a big catalog.
+              </span>
+            </p>
+          )}
 
           {hips.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-ink/15 bg-paper-50 px-4 py-14 text-center">
