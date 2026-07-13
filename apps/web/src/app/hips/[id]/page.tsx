@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { getSaleHips, getSales, type DetailHip, type Valuation } from '../../../lib/api';
 import { sexColorLabel, VALUATION_DISCLAIMER } from '../../../lib/format';
 import { ValuationBands } from '../../../components/ValuationBands';
+import { PedigreeBrief } from '../../../components/PedigreeBrief';
 import { SaveToShortlist } from '../../../components/SaveToShortlist';
 import { StarIcon } from '../../../components/icons';
 import { formatMoney } from '@furlong/shared';
@@ -161,6 +162,8 @@ export default async function HipDetailPage({
           </p>
         )}
       </section>
+
+      <PedigreeBrief hipId={hip.id} />
 
       <section className="mt-6 rounded-2xl border border-ink/10 bg-paper-50 p-6 shadow-card">
         <h2 className="mb-4 font-serif text-lg text-ink-900">Valuation</h2>

@@ -12,6 +12,7 @@ import { registerBuyerRoutes } from './routes/buyer.js';
 import { registerCompareRoutes } from './routes/compare.js';
 import { registerJobRoutes } from './routes/jobs.js';
 import { registerAssistantRoutes } from './routes/assistant.js';
+import { registerPedigreeRoutes } from './routes/pedigree.js';
 
 // 25MB body limit: a full Keeneland September year is several thousand hips of
 // catalog JSON in one /ingest/catalog-json call.
@@ -34,6 +35,7 @@ await registerBuyerRoutes(app);
 await registerCompareRoutes(app);
 await registerJobRoutes(app);
 await registerAssistantRoutes(app);
+await registerPedigreeRoutes(app);
 
 // Railway (and most PaaS) inject the bind port as PORT; fall back to API_PORT
 // for local dev. Host 0.0.0.0 so the container is reachable.

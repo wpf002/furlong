@@ -96,7 +96,7 @@ export function ValuationBands({
       className: 'bg-racing-700',
     },
     {
-      label: 'Likely sale price',
+      label: 'Market estimate',
       low: valuation.predPriceLowCents,
       high: valuation.predPriceHighCents,
       className: isGem

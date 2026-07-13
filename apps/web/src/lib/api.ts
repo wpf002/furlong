@@ -152,6 +152,15 @@ export function getSaleHips(saleId: string): Promise<DetailHip[]> {
   return request<DetailHip[]>(`/sales/${encodeURIComponent(saleId)}/hips`);
 }
 
+export interface PedigreeBrief {
+  brief: string | null;
+  configured: boolean;
+}
+
+export function getPedigreeBrief(hipId: string): Promise<PedigreeBrief> {
+  return request<PedigreeBrief>(`/hips/${encodeURIComponent(hipId)}/pedigree-brief`);
+}
+
 export interface ModelMetrics {
   modelVersion: string | null;
   metrics: {
