@@ -165,17 +165,28 @@ def predict(features: dict) -> dict | None:
 
     # Displayed band is a CALIBRATED 50% interval — "half of comparable yearlings
     # sold between low and high". Config lives in the bundle (model v2.2+): p25/p75
-    # quantiles plus a conformal offset per family so the true coverage is ~50%.
-    # Older bundles have no "display" key → fall back to raw p25/p75 (offset 0).
+    # quantiles plus a WIDTH-STRATIFIED conformal offset (Mondrian) so confident
+    # (tight-prediction) horses get a genuinely tighter band and uncertain ones a
+    # wider honest one, each ~50% coverage. Falls back to the global offset, then
+    # to raw p25/p75, so older bundles still produce valid output.
     disp = bundle.get("display", {})
     lo_q = disp.get("lo_q", 0.25)
     hi_q = disp.get("hi_q", 0.75)
-    p_cal = disp.get("price_cal", 0.0)
-    v_cal = disp.get("value_cal", 0.0)
     lo_q = lo_q if lo_q in pm else 0.25
     hi_q = hi_q if hi_q in pm else 0.75
-    pred_low, pred_high = math.exp(pm[lo_q] - p_cal), math.exp(pm[hi_q] + p_cal)
-    est_low, est_high = math.exp(vm[lo_q] - v_cal), math.exp(vm[hi_q] + v_cal)
+
+    def _band(qm, edges, offsets, global_cal):
+        lo, hi = qm[lo_q], qm[hi_q]
+        if edges and offsets:
+            off = offsets[bisect.bisect_right(edges, hi - lo)]  # bin by predicted width
+        else:
+            off = global_cal
+        return math.exp(lo - off), math.exp(hi + off)
+
+    pred_low, pred_high = _band(pm, disp.get("price_width_edges"),
+                                disp.get("price_width_offsets"), disp.get("price_cal", 0.0))
+    est_low, est_high = _band(vm, disp.get("value_width_edges"),
+                              disp.get("value_width_offsets"), disp.get("value_cal", 0.0))
     # Support blends every prior the model actually uses, not just the sire, so a
     # colt out of a well-documented dam / damsire / consignor isn't under-reported
     # as low confidence. Sire weighted full; dam and damsire half (secondary

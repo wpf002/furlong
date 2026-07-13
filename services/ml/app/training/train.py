@@ -56,6 +56,33 @@ def _cqr_offset(pred_lo: np.ndarray, pred_hi: np.ndarray, y: np.ndarray, cov: fl
     k = min(1.0, math.ceil((n + 1) * cov) / n)
     return float(np.quantile(e, k, method="higher"))
 
+
+STRAT_BINS = 3  # tight / medium / wide, by the model's predicted band width
+
+
+def _strat_offsets(pred_lo: np.ndarray, pred_hi: np.ndarray, y: np.ndarray, cov: float):
+    """Mondrian (width-stratified) conformal. Bins rows by the model's PREDICTED
+    band width (hi-lo, its own uncertainty) and calibrates each bin separately, so
+    confident (tight-prediction) horses get a genuinely tighter final band and
+    uncertain ones a wider (honest) one — each at ~cov coverage, vs. one global
+    offset that over-widens the confident and under-covers the uncertain. Returns
+    (edges, offsets): `edges` are STRAT_BINS-1 width cutpoints; bin index for a new
+    horse is np.searchsorted(edges, width, side='right')."""
+    width = pred_hi - pred_lo
+    edges = [float(np.quantile(width, i / STRAT_BINS)) for i in range(1, STRAT_BINS)]
+    idx = np.searchsorted(edges, width, side="right")
+    offsets = []
+    for b in range(STRAT_BINS):
+        m = idx == b
+        # need enough rows to calibrate a bin; else fall back to the global offset
+        offsets.append(_cqr_offset(pred_lo[m], pred_hi[m], y[m], cov) if m.sum() >= 30
+                       else _cqr_offset(pred_lo, pred_hi, y, cov))
+    return edges, offsets
+
+
+def _apply_strat(width: np.ndarray, edges: list[float], offsets: list[float]) -> np.ndarray:
+    return np.asarray(offsets)[np.searchsorted(edges, width, side="right")]
+
 # Pedigree-only features for the intrinsic "value" model (no sale context).
 # Stud fee and results-driven sire quality belong here — they're pure sire merit.
 VALUE_NUMERIC = ["sire_prior_mean", "sire_prior_count",
@@ -123,18 +150,34 @@ def train_one(feat: pd.DataFrame, currency: str, holdout_years: list[int]) -> di
     # sample for the models above). 0.0 when there's no holdout to calibrate on —
     # the band degrades to the raw p25/p75, which is close but slightly optimistic.
     price_cal = value_cal = 0.0
-    disp_coverage = None
+    p_edges = v_edges = []
+    p_offsets = v_offsets = []
+    disp_coverage = disp_width_global = disp_width_strat = None
     if len(test) >= 20:
         yte_c = test[TARGET].to_numpy()
         pc = _predict_quantiles(price_models, test[price_cols])
         vc = _predict_quantiles(value_models, test[value_cols])
-        price_cal = _cqr_offset(pc[DISPLAY_LO_Q], pc[DISPLAY_HI_Q], yte_c, DISPLAY_COV)
-        value_cal = _cqr_offset(vc[DISPLAY_LO_Q], vc[DISPLAY_HI_Q], yte_c, DISPLAY_COV)
-        lo_c, hi_c = pc[DISPLAY_LO_Q] - price_cal, pc[DISPLAY_HI_Q] + price_cal
-        disp_coverage = round(float(np.mean((yte_c >= lo_c) & (yte_c <= hi_c))), 3)
+        plo, phi = pc[DISPLAY_LO_Q], pc[DISPLAY_HI_Q]
+        vlo, vhi = vc[DISPLAY_LO_Q], vc[DISPLAY_HI_Q]
+        # Global offset (kept as a fallback for old inference paths) ...
+        price_cal = _cqr_offset(plo, phi, yte_c, DISPLAY_COV)
+        value_cal = _cqr_offset(vlo, vhi, yte_c, DISPLAY_COV)
+        # ... and the width-stratified offsets that actually get applied.
+        p_edges, p_offsets = _strat_offsets(plo, phi, yte_c, DISPLAY_COV)
+        v_edges, v_offsets = _strat_offsets(vlo, vhi, yte_c, DISPLAY_COV)
+        # Coverage + median band width, stratified vs. one global offset — proves
+        # the stratified band stays honest AND is tighter for confident horses.
+        po = _apply_strat(phi - plo, p_edges, p_offsets)
+        lo_s, hi_s = plo - po, phi + po
+        disp_coverage = round(float(np.mean((yte_c >= lo_s) & (yte_c <= hi_s))), 3)
+        disp_width_strat = round(float(np.median(np.exp(hi_s) / np.exp(lo_s))), 3)
+        disp_width_global = round(float(np.median(
+            np.exp(phi + price_cal) / np.exp(plo - price_cal))), 3)
     display = {
         "lo_q": DISPLAY_LO_Q, "hi_q": DISPLAY_HI_Q, "target_coverage": DISPLAY_COV,
         "price_cal": price_cal, "value_cal": value_cal,
+        "price_width_edges": p_edges, "price_width_offsets": p_offsets,
+        "value_width_edges": v_edges, "value_width_offsets": v_offsets,
     }
 
     version = f"{MODEL_FAMILY}-{MODEL_VERSION}-{currency}+n{len(train)}"
@@ -160,6 +203,8 @@ def train_one(feat: pd.DataFrame, currency: str, holdout_years: list[int]) -> di
             "improvement_pct": round(100 * (bmae - mmae) / bmae, 1),
             "p10_p90_coverage": round(float(np.mean((yte >= price_pred[0.10]) & (yte <= price_pred[0.90]))), 3),
             "display_band_coverage": disp_coverage,  # true coverage of the shown 50% band
+            "display_band_width_global": disp_width_global,  # one-offset median width
+            "display_band_width_stratified": disp_width_strat,  # width-tiered median
             "model_beats_baseline": bool(mmae < bmae),
             "by_house": _segment("auctionHouse", test, p50, yte, baseline),
         })
