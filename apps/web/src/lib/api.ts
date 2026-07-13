@@ -48,11 +48,21 @@ export interface SearchHipHorse {
   damsireName: string | null;
 }
 
+export interface PedigreeGrade {
+  grade: 'A+' | 'A' | 'B+' | 'B' | 'C' | 'D' | 'F';
+  score: number;
+  g1: number;
+  g2: number;
+  g3: number;
+  listed: number;
+}
+
 export interface SearchHip {
   id: string;
   hipNumber: number;
   sessionNumber: number | null;
   withdrawn: boolean;
+  pedigreeGrade?: PedigreeGrade | null;
   horse: SearchHipHorse;
   consignorName: string | null;
   valuation: Valuation | null;
@@ -83,6 +93,7 @@ export interface DetailHip {
   sessionNumber: number | null;
   withdrawn: boolean;
   catalogPageText?: string | null;
+  pedigreeGrade?: PedigreeGrade | null;
   horse: {
     name: string | null;
     sex: Sex | null;

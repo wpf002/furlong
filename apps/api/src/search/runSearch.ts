@@ -1,5 +1,6 @@
 import { normalizeEntityName, formatMoney, centsToNumber, type SearchQuery } from '@furlong/shared';
 import { prisma } from '@furlong/db';
+import { computePedigreeGrade, type PedigreeGrade } from '../pedigreeGrade.js';
 
 export interface SearchHipOut {
   id: string;
@@ -35,6 +36,7 @@ export interface SearchHipOut {
     bestSpeedFigure: number | null;
   } | null;
   breeze: string | null;
+  pedigreeGrade: PedigreeGrade | null;
   oneLiner: string;
 }
 
@@ -198,6 +200,7 @@ export async function runSearch(query: SearchQuery & { limit?: number }): Promis
       produce,
       racing,
       breeze: h.breezeTime ?? null,
+      pedigreeGrade: computePedigreeGrade(h.catalogPageText),
       oneLiner,
     };
   });

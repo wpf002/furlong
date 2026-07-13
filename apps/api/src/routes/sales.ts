@@ -5,6 +5,7 @@ import { revalueSale } from '../valuation/revalueSale.js';
 import { valuateBroodmareSale } from '../valuation/broodmare.js';
 import { valuateRacingAgeSale } from '../valuation/racingAge.js';
 import { valueSaleByCategory } from '../valuation/dispatch.js';
+import { computePedigreeGrade } from '../pedigreeGrade.js';
 
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL ?? 'http://localhost:8000';
 
@@ -43,9 +44,9 @@ export async function registerSaleRoutes(app: FastifyInstance) {
     return sales.map(({ _count, ...s }) => ({ ...s, hipCount: _count.hips }));
   });
 
-  // Hips for a sale, with horse + latest valuation.
+  // Hips for a sale, with horse + latest valuation + pedigree grade.
   app.get<{ Params: { id: string } }>('/sales/:id/hips', async (req) => {
-    return prisma.hip.findMany({
+    const hips = await prisma.hip.findMany({
       where: { saleId: req.params.id },
       include: {
         horse: { include: { sire: true, dam: { include: { sire: true } } } },
@@ -56,6 +57,7 @@ export async function registerSaleRoutes(app: FastifyInstance) {
       },
       orderBy: { hipNumber: 'asc' },
     });
+    return hips.map((h) => ({ ...h, pedigreeGrade: computePedigreeGrade(h.catalogPageText) }));
   });
 
   // Mark a hip as withdrawn (pulled from the sale before it rings).

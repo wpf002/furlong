@@ -4,6 +4,7 @@ import { sexColorLabel, VALUATION_DISCLAIMER } from '../../../lib/format';
 import { ValuationBands } from '../../../components/ValuationBands';
 import { PedigreeBrief } from '../../../components/PedigreeBrief';
 import { CatalogPage } from '../../../components/CatalogPage';
+import { GradeBadge } from '../../../components/GradeBadge';
 import { SaveToShortlist } from '../../../components/SaveToShortlist';
 import { StarIcon } from '../../../components/icons';
 import { formatMoney } from '@furlong/shared';
@@ -125,6 +126,7 @@ export default async function HipDetailPage({
               Hidden Gem
             </span>
           )}
+          {hip.pedigreeGrade && <GradeBadge g={hip.pedigreeGrade} size="lg" />}
         </div>
 
         <h1 className="mt-4 font-serif text-3xl font-medium leading-tight text-ink-900 sm:text-4xl">

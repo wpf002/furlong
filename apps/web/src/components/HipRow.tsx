@@ -4,6 +4,7 @@ import type { SearchHip } from '../lib/api';
 import { sexColorLabel } from '../lib/format';
 import { ValuationBands } from './ValuationBands';
 import { SaveToShortlist } from './SaveToShortlist';
+import { GradeBadge } from './GradeBadge';
 import { StarIcon } from './icons';
 
 export function HipRow({
@@ -76,16 +77,19 @@ export function HipRow({
               </span>
               <span className="italic">{dam}</span>
             </h3>
-            {isWithdrawn ? (
-              <span className="mt-1 inline-flex shrink-0 items-center rounded-full bg-ink/8 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-500 ring-1 ring-ink/15">
-                Withdrawn
-              </span>
-            ) : isGem ? (
-              <span className="mt-1 inline-flex shrink-0 items-center gap-1 rounded-full bg-brass-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brass-700 ring-1 ring-brass-400/40">
-                <StarIcon className="h-2.5 w-2.5" />
-                Hidden Gem
-              </span>
-            ) : null}
+            <div className="mt-1 flex shrink-0 items-center gap-1.5">
+              {hip.pedigreeGrade && <GradeBadge g={hip.pedigreeGrade} />}
+              {isWithdrawn ? (
+                <span className="inline-flex items-center rounded-full bg-ink/8 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-500 ring-1 ring-ink/15">
+                  Withdrawn
+                </span>
+              ) : isGem ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-brass-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brass-700 ring-1 ring-brass-400/40">
+                  <StarIcon className="h-2.5 w-2.5" />
+                  Hidden Gem
+                </span>
+              ) : null}
+            </div>
           </div>
           {horse.name && (
             <p className="mt-0.5 text-sm font-medium text-ink-600">{horse.name}</p>

@@ -7,6 +7,7 @@ import { getSales, getSaleHips, type Sale, type DetailHip } from '../../lib/api'
 import { sexColorLabel } from '../../lib/format';
 import { ValuationBands } from '../../components/ValuationBands';
 import { SaleSelect } from '../../components/SaleSelect';
+import { GradeBadge } from '../../components/GradeBadge';
 import { ChevronLeftIcon, ChevronRightIcon } from '../../components/icons';
 
 export default function AuctionPage() {
@@ -271,12 +272,15 @@ function AuctionCard({
             </span>
           )}
         </div>
-        <Link
-          href={`/hips/${hip.id}?sale=${encodeURIComponent(saleId)}&from=auction`}
-          className="shrink-0 rounded-lg border border-ink/15 bg-paper-50 px-3 py-1.5 text-xs font-semibold text-ink-700 shadow-sm transition hover:border-brass-400 hover:text-ink-900"
-        >
-          Full Details
-        </Link>
+        <div className="flex shrink-0 items-center gap-2">
+          {hip.pedigreeGrade && <GradeBadge g={hip.pedigreeGrade} size="lg" />}
+          <Link
+            href={`/hips/${hip.id}?sale=${encodeURIComponent(saleId)}&from=auction`}
+            className="rounded-lg border border-ink/15 bg-paper-50 px-3 py-1.5 text-xs font-semibold text-ink-700 shadow-sm transition hover:border-brass-400 hover:text-ink-900"
+          >
+            Full Details
+          </Link>
+        </div>
       </div>
 
       <h2 className="mt-5 font-serif text-lg font-medium leading-snug text-ink-900 sm:text-2xl">
