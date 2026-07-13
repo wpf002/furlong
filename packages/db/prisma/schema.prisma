@@ -134,6 +134,11 @@ model Hip {
 
   withdrawn  Boolean    @default(false) // pulled from the sale before it rings
 
+  // Full sales-catalog "black-type page" text (sire summary, dam produce, female
+  // family) — the document buyers read. Populated at ingest when the source
+  // carries it; NULL until then. Displayed verbatim on the hip card.
+  catalogPageText String?
+
   result     SaleResult?
   valuations Valuation[]
 

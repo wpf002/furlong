@@ -163,6 +163,18 @@ export default async function HipDetailPage({
         )}
       </section>
 
+      {hip.catalogPageText && (
+        <section className="mt-6 rounded-2xl border border-ink/10 bg-paper-50 p-6 shadow-card">
+          <h2 className="font-serif text-lg text-ink-900">Catalog page</h2>
+          <p className="mt-1 text-[11px] uppercase tracking-wide text-ink-500">
+            The official sales-catalog black-type page
+          </p>
+          <pre className="mt-4 max-h-[32rem] overflow-y-auto whitespace-pre-wrap border-t border-ink/10 pt-4 font-sans text-sm leading-relaxed text-ink-800">
+            {hip.catalogPageText}
+          </pre>
+        </section>
+      )}
+
       <PedigreeBrief hipId={hip.id} />
 
       <section className="mt-6 rounded-2xl border border-ink/10 bg-paper-50 p-6 shadow-card">

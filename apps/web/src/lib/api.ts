@@ -82,6 +82,7 @@ export interface DetailHip {
   hipNumber: number;
   sessionNumber: number | null;
   withdrawn: boolean;
+  catalogPageText?: string | null;
   horse: {
     name: string | null;
     sex: Sex | null;

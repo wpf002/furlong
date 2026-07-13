@@ -115,6 +115,9 @@ export async function ingestCatalog(
           breederId,
           breezeTime: hip.breezeTime ?? null,
           breezeSeconds: hip.breezeSeconds ?? null,
+          // Only overwrite the page text when the source actually supplies it,
+          // so a re-ingest without it doesn't wipe a previously-captured page.
+          ...(hip.catalogPageText ? { catalogPageText: hip.catalogPageText } : {}),
         },
       });
       updated += 1;
@@ -133,6 +136,7 @@ export async function ingestCatalog(
           breederId,
           breezeTime: hip.breezeTime ?? null,
           breezeSeconds: hip.breezeSeconds ?? null,
+          catalogPageText: hip.catalogPageText ?? null,
         },
       });
       created += 1;

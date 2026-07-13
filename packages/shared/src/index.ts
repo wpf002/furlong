@@ -13,6 +13,9 @@ export const CatalogHipSchema = z.object({
   damsireName: z.string().nullable(),
   consignorName: z.string().nullable(),
   breederName: z.string().nullable(),
+  // Full catalog "black-type page" text, when the source carries it (sire
+  // summary, dam produce, female family). Optional — most feeds don't yet.
+  catalogPageText: z.string().nullable().optional(),
   // Under-tack breeze (2YO-in-training sales). breezeSeconds is normalized to
   // seconds-per-furlong; breezeTime is the raw published string for display.
   breezeTime: z.string().nullable().optional(),
