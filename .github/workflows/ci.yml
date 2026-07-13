@@ -32,9 +32,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # No `version:` here — it would conflict with the `packageManager`
+      # field in package.json (pnpm/action-setup@v4 errors when both are set).
       - uses: pnpm/action-setup@v4
-        with:
-          version: 9
 
       - uses: actions/setup-node@v4
         with:
@@ -76,9 +76,11 @@ jobs:
         with:
           python-version: '3.12'
           cache: pip
-          cache-dependency-path: services/ml/requirements.txt
+          cache-dependency-path: services/ml/requirements-dev.txt
 
-      - run: pip install -r requirements.txt
+      # requirements-dev.txt pulls in requirements.txt plus pytest (setup-python
+      # ships a clean interpreter with no pytest, so it must be installed here).
+      - run: pip install -r requirements-dev.txt
 
       - name: ML unit tests (parser + valuation)
         run: pytest -q

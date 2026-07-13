@@ -1,0 +1,4 @@
+# Test/dev-only dependencies (kept out of requirements.txt so they don't ship to
+# the runtime image). Installed in CI on top of requirements.txt to run pytest.
+-r requirements.txt
+pytest==9.1.1
