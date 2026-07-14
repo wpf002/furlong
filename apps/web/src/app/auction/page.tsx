@@ -256,7 +256,7 @@ function AuctionCard({
   return (
     <article className={`min-w-0 flex-1 rounded-2xl border border-ink/10 bg-paper-50 p-6 shadow-card sm:p-8 ${hip.withdrawn ? 'opacity-60' : ''}`}>
       <div className="flex items-start justify-between gap-4">
-        <div className="flex flex-col">
+        <div className="flex min-w-0 flex-col">
           <span className="text-[10px] font-medium uppercase tracking-widest text-ink-500">HIP</span>
           <span className="tnum font-serif text-5xl font-semibold leading-none text-racing-800">
             {hip.hipNumber}
@@ -272,7 +272,7 @@ function AuctionCard({
             </span>
           )}
         </div>
-        <div className="flex shrink-0 items-center gap-2">
+        <div className="flex flex-wrap items-center justify-end gap-2">
           {hip.pedigreeGrade && <GradeBadge g={hip.pedigreeGrade} size="lg" />}
           <Link
             href={`/hips/${hip.id}?sale=${encodeURIComponent(saleId)}&from=auction`}
