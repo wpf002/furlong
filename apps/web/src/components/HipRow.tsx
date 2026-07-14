@@ -1,11 +1,10 @@
 import Link from 'next/link';
-import { formatMoney } from '@furlong/shared';
+import { formatMoney, formatMoneyRounded } from '@furlong/shared';
 import type { SearchHip } from '../lib/api';
 import { sexColorLabel } from '../lib/format';
 import { ValuationBands } from './ValuationBands';
 import { SaveToShortlist } from './SaveToShortlist';
 import { GradeBadge } from './GradeBadge';
-import { StarIcon } from './icons';
 
 export function HipRow({
   hip,
@@ -24,17 +23,12 @@ export function HipRow({
   const meta = sexColorLabel(horse.sex, horse.color);
   const soldCents =
     hip.result && !hip.result.rna && hip.result.priceCents != null ? hip.result.priceCents : null;
-  const isGem = hip.valuation?.hiddenGemScore != null && hip.valuation.hiddenGemScore > 0;
   const isWithdrawn = hip.withdrawn;
 
   return (
     <div
       className={`group relative overflow-hidden rounded-2xl border bg-paper-50 shadow-card transition duration-200 hover:-translate-y-0.5 hover:shadow-cardHover ${
-        isWithdrawn
-          ? 'border-ink/10 opacity-60'
-          : isGem
-            ? 'border-brass-400/60 ring-1 ring-brass-400/30'
-            : 'border-ink/10 hover:border-ink/20'
+        isWithdrawn ? 'border-ink/10 opacity-60' : 'border-ink/10 hover:border-ink/20'
       }`}
     >
       {/* Stretched link covers the card for navigation; content sits above with
@@ -79,16 +73,11 @@ export function HipRow({
               </h3>
               <div className="mt-1 flex shrink-0 items-center gap-1.5">
                 {hip.pedigreeGrade && <GradeBadge g={hip.pedigreeGrade} />}
-                {isWithdrawn ? (
+                {isWithdrawn && (
                   <span className="inline-flex items-center rounded-full bg-ink/8 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-ink-500 ring-1 ring-ink/15">
                     Withdrawn
                   </span>
-                ) : isGem ? (
-                  <span className="inline-flex items-center gap-1 rounded-full bg-brass-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brass-700 ring-1 ring-brass-400/40">
-                    <StarIcon className="h-2.5 w-2.5" />
-                    Hidden Gem
-                  </span>
-                ) : null}
+                )}
               </div>
             </div>
             {horse.name && (
@@ -166,8 +155,8 @@ export function HipRow({
                   <p className="mt-1.5 text-xs text-ink-500">
                     Est.{' '}
                     <span className="tnum whitespace-nowrap">
-                      {formatMoney(hip.valuation.predPriceLowCents, currency)}–
-                      {formatMoney(hip.valuation.predPriceHighCents, currency)}
+                      {formatMoneyRounded(hip.valuation.predPriceLowCents, currency)}–
+                      {formatMoneyRounded(hip.valuation.predPriceHighCents, currency)}
                     </span>
                   </p>
                 )}

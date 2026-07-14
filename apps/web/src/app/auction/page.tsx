@@ -175,10 +175,11 @@ export default function AuctionPage() {
 
       {!loading && current && (
         <>
-          {/* Position counter + jump-to-HIP search */}
+          {/* Position counter + jump-to-HIP search. Shows the card's HIP number
+              (matching the number printed on the card), not its list position. */}
           <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-ink-500">
             <span className="tnum">
-              HIP <span className="font-semibold text-ink-700">{index + 1}</span> of {total}
+              HIP <span className="font-semibold text-ink-700">{current.hipNumber}</span> of {total}
             </span>
             <form onSubmit={jumpToHip} className="flex items-center gap-1.5">
               <label htmlFor="hip-jump" className="text-ink-500">
@@ -294,7 +295,7 @@ function AuctionCard({
             </span>
           )}
         </div>
-        <div className="flex flex-wrap items-center justify-end gap-2">
+        <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center">
           {hip.pedigreeGrade && <GradeBadge g={hip.pedigreeGrade} size="lg" />}
           <Link
             href={`/hips/${hip.id}?sale=${encodeURIComponent(saleId)}&from=auction&hip=${hip.hipNumber}`}
@@ -323,7 +324,7 @@ function AuctionCard({
 
       <dl className="mt-4 grid grid-cols-2 gap-x-6 gap-y-2 text-xs">
         {meta && (
-          <Field label="Sex / Color">
+          <Field label="Color / Sex">
             <span className="capitalize">{meta}</span>
           </Field>
         )}

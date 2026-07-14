@@ -196,6 +196,24 @@ export function formatMoney(
   }
 }
 
+/**
+ * Money formatter for model ESTIMATES — rounds to the nearest $1,000 (or 1,000
+ * minor-unit-major) so we never imply false precision on a predicted band
+ * (e.g. "$61,954" reads as spurious accuracy; "$62,000" is honest). Use for
+ * valuation/estimate figures, NOT for actual realized sale prices.
+ */
+export function formatMoneyRounded(
+  minorUnits: bigint | number | null | undefined,
+  currency = 'USD',
+): string {
+  if (minorUnits === null || minorUnits === undefined) return '—';
+  const raw = typeof minorUnits === 'bigint' ? Number(minorUnits) : minorUnits;
+  if (!Number.isFinite(raw)) return '—';
+  // Round to the nearest $1,000 in major units, then hand to formatMoney.
+  const roundedMajor = Math.round(raw / 100 / 1000) * 1000;
+  return formatMoney(roundedMajor * 100, currency);
+}
+
 /** Map a 0..1 confidence into a coarse, honest label. Never invents precision.
  *  Single source of truth for the thresholds — shared by the web badge and
  *  Secretariat, so the label a user reads in the UI matches what the assistant

@@ -43,11 +43,9 @@ Hard rules:
   figure. Do NOT use markdown headers (#), tables, or horizontal rules.
 - Mention the sale a hip is from. If a search was truncated (total > returned),
   say how many matched.
-- Estimates carry a confidence (High/Medium/Low) reflecting how much comparable
-  data backs them. When you quote an estimate, quote its confidence too, and add
-  a brief caveat when confidence is Low or limitedComparables is true — never
-  present a thin-data estimate as if it were solid. Confidence is a data-support
-  signal, not a quality judgment of the horse.
+- Each hip has an estimated sale-price band (rounded to the nearest $1,000).
+  When limitedComparables is true, add a brief caveat — never present a thin-data
+  estimate as if it were solid.
 - If the user is vague, make a reasonable tool call rather than asking back.
 
 ═══════════════════════════════════════════════════════════════════════════════
@@ -80,8 +78,8 @@ export async function registerAssistantRoutes(app: FastifyInstance) {
       };
     }
     const model = process.env.ASSISTANT_MODEL ?? 'claude-sonnet-4-5';
-    // Long answers (e.g. listing every hidden gem in a sale) need headroom so
-    // the reply isn't truncated mid-list. Overridable via ASSISTANT_MAX_TOKENS.
+    // Long answers (e.g. listing every hip in a sale) need headroom so the
+    // reply isn't truncated mid-list. Overridable via ASSISTANT_MAX_TOKENS.
     const maxTokens = Number(process.env.ASSISTANT_MAX_TOKENS ?? 4096) || 4096;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

@@ -31,10 +31,9 @@ export default function TermsPage() {
       <Section title="Informational only">
         <p>
           Furlong is an information tool for thoroughbred buyers. Everything it shows —
-          estimated value ranges, predicted sale prices, confidence scores, “hidden gem”
-          flags, and rankings — is a <strong>data-driven estimate, not a recommendation,
-          appraisal, or guarantee</strong>. Nothing here is bloodstock, veterinary,
-          investment, tax, or legal advice.
+          estimated sale-price ranges, pedigree grades, and rankings — is a{' '}
+          <strong>data-driven estimate, not a recommendation, appraisal, or guarantee</strong>.
+          Nothing here is bloodstock, veterinary, investment, tax, or legal advice.
         </p>
       </Section>
 

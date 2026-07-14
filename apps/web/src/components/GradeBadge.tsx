@@ -3,8 +3,8 @@ import type { PedigreeGrade } from '../lib/api';
 // A+ … F pedigree grade badge. Two sources feed the grade (see api pedigreeGrade):
 // an EXPERT hand-analyzed read where one is held for the hip, otherwise the
 // black-type HEURISTIC (family black-type depth + sire class). Tiered colour;
-// the tooltip explains the basis — the expert read's confidence + hidden angle,
-// or the black type behind a heuristic grade.
+// the tooltip explains the basis — the expert read's note, or the black type
+// behind a heuristic grade.
 
 // Colour by letter tier; +/- within a letter share the tier's palette.
 const STYLE: Record<string, string> = {
@@ -24,10 +24,8 @@ const STYLE: Record<string, string> = {
 export function GradeBadge({ g, size = 'sm' }: { g: PedigreeGrade; size?: 'sm' | 'lg' }) {
   let title: string;
   if (g.source === 'expert') {
-    const conf = g.confidence ? `${g.confidence.toLowerCase()} confidence` : null;
     title =
       `Pedigree grade ${g.grade} (score ${g.score}) — expert pedigree read` +
-      (conf ? `, ${conf}` : '') +
       (g.note ? `. ${g.note}` : '.');
   } else {
     const basis = [
@@ -38,9 +36,8 @@ export function GradeBadge({ g, size = 'sm' }: { g: PedigreeGrade; size?: 'sm' |
     ]
       .filter(Boolean)
       .join(', ');
-    const conf = g.confidence ? ` (${g.confidence.toLowerCase()} confidence)` : '';
     title =
-      `Pedigree grade ${g.grade} (score ${g.score})${conf} — black type in the family: ` +
+      `Pedigree grade ${g.grade} (score ${g.score}) — black type in the family: ` +
       `${basis || 'none on the page'}`;
   }
 

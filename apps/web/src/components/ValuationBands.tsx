@@ -1,69 +1,18 @@
-import { formatMoney } from '@furlong/shared';
+import { formatMoneyRounded } from '@furlong/shared';
 import type { Valuation } from '../lib/api';
-import { VALUATION_DISCLAIMER, confidenceLabel } from '../lib/format';
+import { VALUATION_DISCLAIMER } from '../lib/format';
 
 // --------------------------------------------------------------------------
-// Range-bar visualization.
+// Estimated-sale-price band.
 //
-// Both bands (estimated value + predicted sale price) are plotted on one
-// shared axis so a buyer can compare them at a glance. Each band is drawn as
-// a filled segment spanning low → high; the percentage geometry is purely a
-// visual aid — exact figures are always printed via formatCents alongside.
+// A single price band — the model's context-aware prediction of what the hip
+// will sell for (predPrice). Drawn as a filled segment spanning low → high;
+// the bar geometry is a visual aid, exact figures are printed alongside and
+// rounded to the nearest $1,000 (no false precision).
 // --------------------------------------------------------------------------
-
-interface Band {
-  label: string;
-  low: number;
-  high: number;
-  className: string; // fill style
-}
-
-function pct(value: number, min: number, span: number): number {
-  if (span <= 0) return 0;
-  return Math.min(100, Math.max(0, ((value - min) / span) * 100));
-}
-
-function RangeBar({
-  band,
-  min,
-  span,
-  currency,
-}: {
-  band: Band;
-  min: number;
-  span: number;
-  currency: string;
-}) {
-  const left = pct(band.low, min, span);
-  const right = pct(band.high, min, span);
-  const width = Math.max(right - left, 1.5);
-
-  return (
-    // Label, then figure, then bar — stacked so the figure always has the full
-    // column width and fits on one line (never wraps or overflows the card).
-    <div className="space-y-1">
-      <dt className="text-[11px] font-medium uppercase tracking-wide text-ink-500">
-        {band.label}
-      </dt>
-      <dd className="tnum whitespace-nowrap text-sm font-semibold text-ink-900">
-        {formatMoney(band.low, currency)}
-        <span className="px-1 font-normal text-ink-500">–</span>
-        {formatMoney(band.high, currency)}
-      </dd>
-      <div className="relative h-2 rounded-full bg-paper-300/70">
-        <div
-          className={`absolute inset-y-0 rounded-full ${band.className}`}
-          style={{ left: `${left}%`, width: `${width}%` }}
-        />
-      </div>
-    </div>
-  );
-}
 
 /**
- * Renders the valuation bands with an honest confidence indicator. Respects
- * limitedComparables (loud warning) and null valuations ("Not yet valued").
- * Never fakes precision when data is thin.
+ * Renders the estimated sale-price band. Null valuations show "Not yet valued".
  */
 export function ValuationBands({
   valuation,
@@ -84,68 +33,27 @@ export function ValuationBands({
     );
   }
 
-  const conf = confidenceLabel(valuation.confidence);
-  const isGem =
-    valuation.hiddenGemScore != null && valuation.hiddenGemScore > 0;
-
-  const bands: Band[] = [
-    {
-      label: 'Pedigree value',
-      low: valuation.estValueLowCents,
-      high: valuation.estValueHighCents,
-      className: 'bg-racing-700',
-    },
-    {
-      label: 'Market estimate',
-      low: valuation.predPriceLowCents,
-      high: valuation.predPriceHighCents,
-      className: isGem
-        ? 'bg-gradient-to-r from-brass-400 to-brass-600'
-        : 'bg-brass-500',
-    },
-  ];
-
-  // Shared axis across both bands so the segments are visually comparable.
-  const allValues = bands.flatMap((b) => [b.low, b.high]);
-  const min = Math.min(...allValues);
-  const max = Math.max(...allValues);
-  const pad = (max - min) * 0.08 || max * 0.05 || 1;
-  const axisMin = Math.max(0, min - pad);
-  const span = max + pad - axisMin;
+  const low = valuation.predPriceLowCents;
+  const high = valuation.predPriceHighCents;
 
   return (
     <div className={compact ? 'space-y-2.5' : 'space-y-3'}>
-      <dl className="space-y-3">
-        {bands.map((band) => (
-          <RangeBar
-            key={band.label}
-            band={band}
-            min={axisMin}
-            span={span}
-            currency={currency}
-          />
-        ))}
-      </dl>
-
-      <div className="flex flex-wrap items-center gap-2 pt-0.5">
-        <span className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-ink-500">
-          <span
-            className={`inline-block h-1.5 w-1.5 rounded-full ${
-              conf === 'High'
-                ? 'bg-racing-700'
-                : conf === 'Medium'
-                  ? 'bg-amber-500'
-                  : 'bg-red-500'
-            }`}
-          />
-          {conf} confidence
-        </span>
+      <div className="space-y-1">
+        <p className="text-[11px] font-medium uppercase tracking-wide text-ink-500">
+          Estimated sale price
+        </p>
+        <p className="tnum whitespace-nowrap text-sm font-semibold text-ink-900">
+          {formatMoneyRounded(low, currency)}
+          <span className="px-1 font-normal text-ink-500">–</span>
+          {formatMoneyRounded(high, currency)}
+        </p>
+        <div className="relative h-2 rounded-full bg-paper-300/70">
+          <div className="absolute inset-y-0 left-[8%] right-[8%] rounded-full bg-brass-500" />
+        </div>
       </div>
 
       {showDisclaimer && (
-        <p className="text-xs italic leading-relaxed text-ink-500">
-          {VALUATION_DISCLAIMER}
-        </p>
+        <p className="text-xs italic leading-relaxed text-ink-500">{VALUATION_DISCLAIMER}</p>
       )}
     </div>
   );

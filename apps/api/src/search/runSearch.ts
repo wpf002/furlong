@@ -59,7 +59,6 @@ export async function runSearch(query: SearchQuery & { limit?: number }): Promis
     budgetLowCents,
     budgetHighCents,
     preferredSires,
-    hiddenGemsOnly,
     minPedigreeScore,
     limit,
   } = query;
@@ -141,9 +140,6 @@ export async function runSearch(query: SearchQuery & { limit?: number }): Promis
       const sireNorm = normalizeEntityName(h.horse.sire?.name ?? null);
       if (!sireNorm || !preferredNormalized.includes(sireNorm)) return false;
     }
-    if (hiddenGemsOnly) {
-      if (!v || v.hiddenGemScore == null || v.hiddenGemScore <= 0) return false;
-    }
     if (minPedigreeScore != null) {
       const g = gradeFor(h);
       if (!g || g.score < minPedigreeScore) return false;
@@ -151,17 +147,8 @@ export async function runSearch(query: SearchQuery & { limit?: number }): Promis
     return true;
   });
 
-  const ranked = filtered.sort((a, b) => {
-    const va = a.valuations[0];
-    const vb = b.valuations[0];
-    if (va && !vb) return -1;
-    if (!va && vb) return 1;
-    if (!va || !vb) return 0;
-    const ga = va.hiddenGemScore ?? -Infinity;
-    const gb = vb.hiddenGemScore ?? -Infinity;
-    if (gb !== ga) return gb - ga;
-    return Number(va.predPriceLowCents) - Number(vb.predPriceLowCents);
-  });
+  // Present in catalog (hip-number) order.
+  const ranked = filtered.sort((a, b) => a.hipNumber - b.hipNumber);
 
   const sliced = typeof limit === 'number' ? ranked.slice(0, limit) : ranked;
 

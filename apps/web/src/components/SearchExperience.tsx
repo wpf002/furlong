@@ -6,7 +6,6 @@ import { search } from '../lib/api';
 import { VALUATION_DISCLAIMER } from '../lib/format';
 import { SearchForm, type SearchSubmit } from './SearchForm';
 import { HipRow } from './HipRow';
-import { StarIcon } from './icons';
 
 const PAGE = 20;
 
@@ -15,14 +14,12 @@ export function SearchExperience({
   salesError,
   storageKey = 'furlong:lastSearch',
   showBudget = true,
-  showGems = true,
   showSave = true,
 }: {
   sales: Sale[];
   salesError: string | null;
   storageKey?: string;
   showBudget?: boolean;
-  showGems?: boolean;
   showSave?: boolean;
 }) {
   const [hips, setHips] = useState<SearchHip[] | null>(null);
@@ -35,7 +32,6 @@ export function SearchExperience({
 
   // Client-side filters over the returned list.
   const [text, setText] = useState('');
-  const [gemsOnly, setGemsOnly] = useState(false);
   const [shown, setShown] = useState(PAGE);
 
   // The full, UNCONSTRAINED catalog for the active sale. Typing in the filter
@@ -51,7 +47,6 @@ export function SearchExperience({
     setError(null);
     setActiveSaleId(saleId);
     setText('');
-    setGemsOnly(false);
     setShown(PAGE);
     try {
       const res = await search(query);
@@ -86,7 +81,6 @@ export function SearchExperience({
           setCurrency(s.currency ?? 'USD');
           setActiveSaleId(s.activeSaleId ?? '');
           setText(s.text ?? '');
-          setGemsOnly(!!s.gemsOnly);
           setShown(s.shown ?? PAGE);
           return;
         }
@@ -107,12 +101,12 @@ export function SearchExperience({
     try {
       sessionStorage.setItem(
         storageKey,
-        JSON.stringify({ hips, count, currency, activeSaleId, text, gemsOnly, shown }),
+        JSON.stringify({ hips, count, currency, activeSaleId, text, shown }),
       );
     } catch {
       /* ignore */
     }
-  }, [hips, count, currency, activeSaleId, text, gemsOnly, shown]);
+  }, [hips, count, currency, activeSaleId, text, shown]);
 
   // Load the full catalog for the active sale (once per sale) so the free-text
   // filter can search everything, not just the constrained result set.
@@ -149,7 +143,6 @@ export function SearchExperience({
     // consignor, barn, hip #). Otherwise we show the constrained result set.
     const base = filtering ? (catalog ?? hips ?? []) : (hips ?? []);
     let list = base;
-    if (gemsOnly) list = list.filter((h) => (h.valuation?.hiddenGemScore ?? 0) > 0);
     if (q) {
       list = list.filter((h) =>
         [
@@ -169,7 +162,7 @@ export function SearchExperience({
     // Always present results in catalog order (by hip number), regardless of
     // the search/filter options.
     return [...list].sort((a, b) => a.hipNumber - b.hipNumber);
-  }, [hips, catalog, gemsOnly, q, filtering]);
+  }, [hips, catalog, q, filtering]);
 
   // With an active text filter the visible list IS the match set (drawn from the
   // whole catalog); otherwise the constrained search count leads.
@@ -238,17 +231,6 @@ export function SearchExperience({
               )}
             </h2>
             <div className="flex flex-wrap items-center gap-3">
-              {showGems && (
-                <label className="flex cursor-pointer items-center gap-1.5 text-xs font-medium text-ink-600">
-                  <input
-                    type="checkbox"
-                    checked={gemsOnly}
-                    onChange={(e) => setGemsOnly(e.target.checked)}
-                    className="h-3.5 w-3.5 rounded border-ink/30 text-brass-500 focus:ring-brass-400/40"
-                  />
-                  Hidden Gems
-                </label>
-              )}
               <input
                 value={text}
                 onChange={(e) => setText(e.target.value)}
@@ -258,18 +240,6 @@ export function SearchExperience({
               />
             </div>
           </div>
-
-          {showGems && (
-            <p className="-mt-1 flex items-start gap-1.5 text-xs text-ink-500">
-              <StarIcon className="mt-0.5 h-3 w-3 shrink-0 text-brass-500" />
-              <span>
-                A <span className="font-medium text-brass-700">Hidden Gem</span> is a value signal,
-                not a pedigree grade: the model thinks the horse is worth more than it&apos;s likely
-                to sell for. A modest pedigree can still be underpriced — so a Gem and a lower
-                pedigree grade often go together.
-              </span>
-            </p>
-          )}
 
           {visible.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-ink/15 bg-paper-50 px-4 py-14 text-center">

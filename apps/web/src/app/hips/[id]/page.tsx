@@ -6,7 +6,6 @@ import { PedigreeBrief } from '../../../components/PedigreeBrief';
 import { CatalogPage } from '../../../components/CatalogPage';
 import { GradeBadge } from '../../../components/GradeBadge';
 import { SaveToShortlist } from '../../../components/SaveToShortlist';
-import { StarIcon } from '../../../components/icons';
 import { formatMoney } from '@furlong/shared';
 
 export const dynamic = 'force-dynamic';
@@ -101,7 +100,6 @@ export default async function HipDetailPage({
   const sire = horse.sire?.name ?? 'Unknown sire';
   const dam = horse.dam?.name ?? 'Unknown dam';
   const meta = sexColorLabel(horse.sex, horse.color);
-  const isGem = latest?.hiddenGemScore != null && latest.hiddenGemScore > 0;
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6">
@@ -121,12 +119,6 @@ export default async function HipDetailPage({
           {hip.sessionNumber != null && (
             <span className="rounded-full bg-ink/5 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-ink-500">
               Session {hip.sessionNumber}
-            </span>
-          )}
-          {isGem && (
-            <span className="inline-flex items-center gap-1 rounded-full bg-brass-50 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-brass-700 ring-1 ring-brass-400/40">
-              <StarIcon className="h-2.5 w-2.5" />
-              Hidden Gem
             </span>
           )}
           {hip.pedigreeGrade && <GradeBadge g={hip.pedigreeGrade} size="lg" />}
