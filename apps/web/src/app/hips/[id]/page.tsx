@@ -25,16 +25,21 @@ export default async function HipDetailPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ sale?: string; from?: string }>;
+  searchParams: Promise<{ sale?: string; from?: string; hip?: string }>;
 }) {
   const { id } = await params;
-  const { sale: saleId, from } = await searchParams;
+  const { sale: saleId, from, hip: hipParam } = await searchParams;
 
-  // Return the buyer to wherever they opened this hip from (default: Search).
+  // Return the buyer to wherever they opened this hip from (default: Search) —
+  // and, from the auction, to the exact card they were on (?hip=…).
   const fromAuction = from === 'auction';
-  const backHref = fromAuction
-    ? `/auction${saleId ? `?sale=${encodeURIComponent(saleId)}` : ''}`
-    : '/';
+  const auctionQuery = [
+    saleId ? `sale=${encodeURIComponent(saleId)}` : '',
+    hipParam ? `hip=${encodeURIComponent(hipParam)}` : '',
+  ]
+    .filter(Boolean)
+    .join('&');
+  const backHref = fromAuction ? `/auction${auctionQuery ? `?${auctionQuery}` : ''}` : '/';
   const backLink = (
     <Link
       href={backHref}

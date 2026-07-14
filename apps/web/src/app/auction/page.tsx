@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
 import { formatMoney } from '@furlong/shared';
 import { getSales, getSaleHips, type Sale, type DetailHip } from '../../lib/api';
@@ -19,6 +19,9 @@ export default function AuctionPage() {
   const [error, setError] = useState<string | null>(null);
   const [jump, setJump] = useState('');
   const [jumpMiss, setJumpMiss] = useState(false);
+  // Hip number to restore once the catalog loads (from ?hip= on the URL when
+  // returning from a Full Details page). Consumed once, then cleared.
+  const pendingHip = useRef<number | null>(null);
 
   // Load the list of sales once.
   useEffect(() => {
@@ -27,9 +30,12 @@ export default function AuctionPage() {
       .then((all) => {
         if (cancelled) return;
         setSales(all);
-        // Restore the sale from the URL (?sale=…) when returning from a hip page;
-        // otherwise default to the most recent sale that has a catalog.
-        const urlSale = new URLSearchParams(window.location.search).get('sale');
+        // Restore the sale + hip from the URL (?sale=…&hip=…) when returning
+        // from a hip page; otherwise default to the most recent catalogued sale.
+        const params = new URLSearchParams(window.location.search);
+        const urlSale = params.get('sale');
+        const urlHip = parseInt(params.get('hip') ?? '', 10);
+        if (Number.isFinite(urlHip)) pendingHip.current = urlHip;
         const fromUrl = urlSale ? all.find((s) => s.id === urlSale) : undefined;
         const def = fromUrl ?? all.find((s) => (s.hipCount ?? 1) > 0) ?? all[0];
         if (def) setSaleId(def.id);
@@ -54,7 +60,14 @@ export default function AuctionPage() {
       .then((list) => {
         if (cancelled) return;
         // The API returns hips in catalog (hipNumber) order; keep it explicit.
-        setHips([...list].sort((a, b) => a.hipNumber - b.hipNumber));
+        const sorted = [...list].sort((a, b) => a.hipNumber - b.hipNumber);
+        setHips(sorted);
+        // Restore the card the buyer was on before opening Full Details.
+        if (pendingHip.current != null) {
+          const i = sorted.findIndex((h) => h.hipNumber === pendingHip.current);
+          if (i >= 0) setIndex(i);
+          pendingHip.current = null;
+        }
       })
       .catch((e) => !cancelled && setError(e instanceof Error ? e.message : 'Could not load catalog.'))
       .finally(() => !cancelled && setLoading(false));
@@ -101,6 +114,15 @@ export default function AuctionPage() {
   }, [go]);
 
   const current = hips && hips.length > 0 ? hips[Math.min(index, hips.length - 1)] : null;
+  const currentHipNumber = current?.hipNumber ?? null;
+
+  // Keep the URL in sync with the current card (?sale=…&hip=…) so both the
+  // browser Back button and the Full Details back-link return to this hip.
+  useEffect(() => {
+    if (!saleId || currentHipNumber == null) return;
+    const url = `${window.location.pathname}?sale=${encodeURIComponent(saleId)}&hip=${currentHipNumber}`;
+    window.history.replaceState(null, '', url);
+  }, [saleId, currentHipNumber]);
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-12 sm:px-6 sm:py-16">
@@ -275,7 +297,7 @@ function AuctionCard({
         <div className="flex flex-wrap items-center justify-end gap-2">
           {hip.pedigreeGrade && <GradeBadge g={hip.pedigreeGrade} size="lg" />}
           <Link
-            href={`/hips/${hip.id}?sale=${encodeURIComponent(saleId)}&from=auction`}
+            href={`/hips/${hip.id}?sale=${encodeURIComponent(saleId)}&from=auction&hip=${hip.hipNumber}`}
             className="rounded-lg border border-ink/15 bg-paper-50 px-3 py-1.5 text-xs font-semibold text-ink-700 shadow-sm transition hover:border-brass-400 hover:text-ink-900"
           >
             Full Details
