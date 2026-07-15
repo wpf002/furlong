@@ -149,6 +149,78 @@ export async function registerSaleRoutes(app: FastifyInstance) {
     return { nSold, nScored: scored.length, scorecard, scored };
   });
 
+  // Model track record — scorecards for every completed sale that has both
+  // predictions and realized results, plus a pooled overall. Cached briefly
+  // (scoring scans a lot of hips). Only sales from the model's out-of-sample
+  // years (>= 2024) with a catalog are considered.
+  let trackCache: { at: number; body: unknown } | null = null;
+  app.get('/scorecards', async () => {
+    const now = Date.now();
+    if (trackCache && now - trackCache.at < 10 * 60_000) return trackCache.body;
+
+    const sales = await prisma.sale.findMany({
+      where: { year: { gte: 2024 }, hips: { some: {} } },
+      select: { id: true, auctionHouse: true, name: true, year: true, currency: true },
+    });
+
+    const perSale: unknown[] = [];
+    const allScores: ReturnType<typeof scoreValuation>[] = [];
+    for (const s of sales) {
+      const hips = await prisma.hip.findMany({
+        where: { saleId: s.id },
+        select: {
+          result: { select: { priceCents: true, rna: true } },
+          valuations: {
+            orderBy: { createdAt: 'desc' },
+            take: 1,
+            select: {
+              estValueLowCents: true,
+              estValueHighCents: true,
+              predPriceLowCents: true,
+              predPriceHighCents: true,
+            },
+          },
+        },
+      });
+      let nSold = 0;
+      const scores = [];
+      for (const h of hips) {
+        const price = h.result && !h.result.rna ? h.result.priceCents : null;
+        if (price != null) nSold += 1;
+        const v = h.valuations[0];
+        if (price == null || !v) continue;
+        const sc = scoreValuation(price, v);
+        if (sc) {
+          scores.push(sc);
+          allScores.push(sc);
+        }
+      }
+      const scorecard = aggregateScores(scores);
+      if (scorecard) {
+        perSale.push({
+          saleId: s.id,
+          auctionHouse: s.auctionHouse,
+          name: s.name,
+          year: s.year,
+          nSold,
+          nScored: scores.length,
+          scorecard,
+        });
+      }
+    }
+
+    perSale.sort((a, b) => {
+      const A = a as { year: number; auctionHouse: string };
+      const B = b as { year: number; auctionHouse: string };
+      return B.year - A.year || A.auctionHouse.localeCompare(B.auctionHouse);
+    });
+
+    const overall = aggregateScores(allScores.filter((s): s is NonNullable<typeof s> => s != null));
+    const body = { overall, sales: perSale };
+    trackCache = { at: now, body };
+    return body;
+  });
+
   // Mark a hip as withdrawn (pulled from the sale before it rings).
   app.post<{ Params: { hipId: string } }>('/hips/:hipId/withdraw', async (req, reply) => {
     const hip = await prisma.hip.update({

@@ -12,6 +12,7 @@ const NAV = [
   { href: '/auction', label: 'Auction' },
   { href: '/calendar', label: 'Calendar' },
   { href: '/compare', label: 'Compare' },
+  { href: '/track-record', label: 'Track Record' },
   { href: '/shortlists', label: 'Shortlists' },
   { href: '/archive', label: 'Archive' },
   { href: '/info', label: 'Info' },

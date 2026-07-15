@@ -202,6 +202,25 @@ export function getSaleScorecard(saleId: string): Promise<SaleScorecardResponse>
   return request<SaleScorecardResponse>(`/sales/${encodeURIComponent(saleId)}/scorecard`);
 }
 
+export interface SaleScoreSummary {
+  saleId: string;
+  auctionHouse: string;
+  name: string;
+  year: number;
+  nSold: number;
+  nScored: number;
+  scorecard: Scorecard;
+}
+
+export interface TrackRecord {
+  overall: Scorecard | null;
+  sales: SaleScoreSummary[];
+}
+
+export function getTrackRecord(): Promise<TrackRecord> {
+  return request<TrackRecord>('/scorecards');
+}
+
 export interface PedigreeBrief {
   brief: string | null;
   configured: boolean;
