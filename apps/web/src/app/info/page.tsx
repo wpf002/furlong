@@ -58,25 +58,11 @@ export default function InfoPage() {
               quantile gradient-boosted regression model
             </span>{' '}
             (sklearn HistGradientBoostingRegressor), trained on log-prices of every hammer price in
-            the database. The model learns two things:
-          </p>
-          <ul className="ml-4 list-disc space-y-1.5">
-            <li>
-              <span className="font-medium text-ink-900">Market estimate</span> — what the market
-              is likely to pay at auction, given the full context: sire, dam, damsire, consignor,
-              session, hip number, auction house, year, sex, and color. This is the headline number
-              to bid against.
-            </li>
-            <li>
-              <span className="font-medium text-ink-900">Pedigree value</span> — what the pedigree
-              alone suggests, ignoring sale context (same model, pedigree features only). When it
-              sits above the market estimate, the bloodlines are worth more than the horse&apos;s
-              catalog position is likely to fetch.
-            </li>
-          </ul>
-          <p>
-            Both are auction-price predictions in the same units — the comparison between them is
-            the point, not either number alone.
+            the database. The displayed{' '}
+            <span className="font-medium text-ink-900">Estimated sale price</span> is what the
+            market is likely to pay at auction given the full context: sire, dam, damsire,
+            consignor, session, hip number, auction house, year, sex, and color — the number to bid
+            against.
           </p>
           <p>
             High-cardinality entities like sires, dams, and consignors are encoded as{' '}
@@ -88,13 +74,13 @@ export default function InfoPage() {
           </p>
         </Section>
 
-        <Section title="Price bands: what the ranges mean">
+        <Section title="Price band: what the range means">
           <p>
             The model is trained at seven quantiles simultaneously:{' '}
-            <span className="tnum font-medium">p10, p25, p35, p50, p65, p75, p90</span>. Each
-            displayed band uses the inner quantiles (p35 to p65) — in a typical market, about 30%
-            of comparable horses sell within it. Figures are rounded to the nearest $1,000 to avoid
-            implying false precision.
+            <span className="tnum font-medium">p10, p25, p35, p50, p65, p75, p90</span>. The
+            displayed <Pill>Estimated sale price</Pill> band uses the inner quantiles (p35 to p65) —
+            in a typical market, about 30% of comparable horses sell within it. Figures are rounded
+            to the nearest $1,000 to avoid implying false precision.
           </p>
           <p>
             Narrower bands reflect less uncertainty. Wider bands reflect genuine uncertainty —
