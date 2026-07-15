@@ -7,6 +7,7 @@ import { valuateRacingAgeSale } from '../valuation/racingAge.js';
 import { valueSaleByCategory } from '../valuation/dispatch.js';
 import { computePedigreeGrade, pedigreeGradeForHip } from '../pedigreeGrade.js';
 import { expertPedigreeFor } from '../data/ftJuly2026Pedigree.js';
+import { scoreValuation, aggregateScores } from '@furlong/shared';
 
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL ?? 'http://localhost:8000';
 
@@ -94,6 +95,58 @@ export async function registerSaleRoutes(app: FastifyInstance) {
           : computePedigreeGrade(h.catalogPageText),
       };
     });
+  });
+
+  // Score the model's predictions for a sale against its realized results.
+  // Once a completed sale's results are loaded (POST /ingest/results), this
+  // compares each sold hip's actual hammer price to its latest predicted band.
+  // Returns null scorecard when no sold hip has a valuation to score against.
+  app.get<{ Params: { id: string } }>('/sales/:id/scorecard', async (req) => {
+    const hips = await prisma.hip.findMany({
+      where: { saleId: req.params.id },
+      include: {
+        result: true,
+        valuations: { orderBy: { createdAt: 'desc' }, take: 1 },
+      },
+      orderBy: { hipNumber: 'asc' },
+    });
+
+    const nSold = hips.filter((h) => h.result && !h.result.rna && h.result.priceCents != null).length;
+
+    const scored = hips.flatMap((h) => {
+      const price = h.result && !h.result.rna ? h.result.priceCents : null;
+      const v = h.valuations[0];
+      if (price == null || !v) return [];
+      const s = scoreValuation(price, v);
+      if (!s) return [];
+      return [
+        {
+          hipNumber: h.hipNumber,
+          actualCents: s.actualCents,
+          predMidCents: s.predMidCents,
+          withinPredBand: s.withinPredBand,
+          predDeltaPct: s.predDeltaPct,
+          predAbsPctError: s.predAbsPctError,
+          predErrorFactor: s.predErrorFactor,
+          withinEstBand: s.withinEstBand,
+        },
+      ];
+    });
+
+    const scorecard = aggregateScores(
+      scored.map((s) => ({
+        actualCents: s.actualCents,
+        predMidCents: s.predMidCents,
+        withinPredBand: s.withinPredBand,
+        predDeltaPct: s.predDeltaPct,
+        predAbsPctError: s.predAbsPctError,
+        predErrorFactor: s.predErrorFactor,
+        estMidCents: 0,
+        withinEstBand: s.withinEstBand,
+      })),
+    );
+
+    return { nSold, nScored: scored.length, scorecard, scored };
   });
 
   // Mark a hip as withdrawn (pulled from the sale before it rings).

@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { formatMoney, formatMoneyRounded } from '@furlong/shared';
+import { formatMoney } from '@furlong/shared';
 import type { SearchHip } from '../lib/api';
 import { sexColorLabel } from '../lib/format';
 import { ValuationBands } from './ValuationBands';
@@ -143,25 +143,7 @@ export function HipRow({
                 <SaveToShortlist hipId={hip.id} />
               </div>
             )}
-            {soldCents != null ? (
-              <div>
-                <p className="text-[11px] font-medium uppercase tracking-wide text-ink-500">
-                  Sold for
-                </p>
-                <p className="tnum font-serif text-2xl font-semibold leading-none text-racing-800">
-                  {formatMoney(soldCents, currency)}
-                </p>
-                {hip.valuation && (
-                  <p className="mt-1.5 text-xs text-ink-500">
-                    Est.{' '}
-                    <span className="tnum whitespace-nowrap">
-                      {formatMoneyRounded(hip.valuation.predPriceLowCents, currency)}–
-                      {formatMoneyRounded(hip.valuation.predPriceHighCents, currency)}
-                    </span>
-                  </p>
-                )}
-              </div>
-            ) : hip.result?.rna ? (
+            {hip.result?.rna ? (
               <p className="text-sm text-ink-500">Not sold (RNA)</p>
             ) : (
               <ValuationBands
@@ -169,6 +151,7 @@ export function HipRow({
                 showDisclaimer={false}
                 compact
                 currency={currency}
+                soldCents={soldCents}
               />
             )}
           </div>

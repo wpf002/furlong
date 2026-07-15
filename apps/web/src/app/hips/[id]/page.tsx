@@ -166,7 +166,12 @@ export default async function HipDetailPage({
 
       <section className="mt-6 rounded-2xl border border-ink/10 bg-paper-50 p-6 shadow-card">
         <h2 className="mb-4 font-serif text-lg text-ink-900">Valuation</h2>
-        <ValuationBands valuation={latest} currency={currency} showDisclaimer={false} />
+        <ValuationBands
+          valuation={latest}
+          currency={currency}
+          showDisclaimer={false}
+          soldCents={sold != null ? Number(sold) : null}
+        />
         <p className="mt-4 border-t border-ink/10 pt-4 text-xs italic leading-relaxed text-ink-500">
           {VALUATION_DISCLAIMER}
         </p>

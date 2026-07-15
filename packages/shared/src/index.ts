@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+// Prediction-scoring helpers (predicted vs. realized sale price).
+export * from './scoring.js';
+
 // A single parsed catalog entry (one hip). The ML parser emits these.
 export const CatalogHipSchema = z.object({
   hipNumber: z.number().int().positive(),

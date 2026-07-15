@@ -2,11 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import Link from 'next/link';
-import { formatMoney } from '@furlong/shared';
 import { getSales, getSaleHips, type Sale, type DetailHip } from '../../lib/api';
 import { sexColorLabel } from '../../lib/format';
 import { ValuationBands } from '../../components/ValuationBands';
 import { SaleSelect } from '../../components/SaleSelect';
+import { SaleScorecard } from '../../components/SaleScorecard';
 import { GradeBadge } from '../../components/GradeBadge';
 import { ChevronLeftIcon, ChevronRightIcon } from '../../components/icons';
 
@@ -153,6 +153,8 @@ export default function AuctionPage() {
           />
         </div>
       </div>
+
+      {saleId && <SaleScorecard saleId={saleId} />}
 
       {error && (
         <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
@@ -337,19 +339,12 @@ function AuctionCard({
       </dl>
 
       <div className="mt-6 border-t border-ink/10 pt-5">
-        {sold != null ? (
-          <div>
-            <p className="text-[11px] font-medium uppercase tracking-wide text-ink-500">Sold for</p>
-            <p className="tnum font-serif text-2xl font-semibold leading-none text-racing-800">
-              {formatMoney(sold, currency)}
-              {hip.result?.status ? (
-                <span className="ml-2 text-xs font-normal text-ink-500">({hip.result.status})</span>
-              ) : null}
-            </p>
-          </div>
-        ) : (
-          <ValuationBands valuation={valuation} showDisclaimer={false} currency={currency} />
-        )}
+        <ValuationBands
+          valuation={valuation}
+          showDisclaimer={false}
+          currency={currency}
+          soldCents={sold != null ? Number(sold) : null}
+        />
       </div>
     </article>
   );

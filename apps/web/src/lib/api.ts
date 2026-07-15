@@ -173,6 +173,35 @@ export function getSaleHips(saleId: string): Promise<DetailHip[]> {
   return request<DetailHip[]>(`/sales/${encodeURIComponent(saleId)}/hips`);
 }
 
+export interface Scorecard {
+  n: number;
+  medianAbsPctError: number;
+  meanAbsPctError: number;
+  medianErrorFactor: number;
+  pctWithinPredBand: number;
+  medianDeltaPct: number;
+}
+
+export interface SaleScorecardResponse {
+  nSold: number;
+  nScored: number;
+  scorecard: Scorecard | null;
+  scored: Array<{
+    hipNumber: number;
+    actualCents: number;
+    predMidCents: number;
+    withinPredBand: boolean;
+    predDeltaPct: number;
+    predAbsPctError: number;
+    predErrorFactor: number;
+    withinEstBand: boolean;
+  }>;
+}
+
+export function getSaleScorecard(saleId: string): Promise<SaleScorecardResponse> {
+  return request<SaleScorecardResponse>(`/sales/${encodeURIComponent(saleId)}/scorecard`);
+}
+
 export interface PedigreeBrief {
   brief: string | null;
   configured: boolean;

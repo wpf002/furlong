@@ -13,5 +13,15 @@ const nextConfig = {
   env: {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
   },
+  // @furlong/shared is consumed as TypeScript source and uses NodeNext-style
+  // ".js" import specifiers that actually point at ".ts" files. Teach webpack to
+  // resolve those the way tsc does.
+  webpack: (config) => {
+    config.resolve.extensionAlias = {
+      ...config.resolve.extensionAlias,
+      '.js': ['.ts', '.tsx', '.js', '.jsx'],
+    };
+    return config;
+  },
 };
 export default nextConfig;
