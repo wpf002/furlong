@@ -124,14 +124,21 @@ function buildHips(horses: FtHorse[]): CatalogHip[] {
 function buildResultsCsv(horses: FtHorse[]): string {
   const lines = ['hipNumber,priceCents,rna,buyer'];
   for (const h of horses) {
-    if (h.out) continue;
-    let price = 0;
+    if (h.out) continue; // withdrawn / scratched — not part of the sale
     const p = Number(h.price ?? 0);
-    if (Number.isFinite(p)) price = p;
+    const price = Number.isFinite(p) ? p : 0;
     const buyer = (h.purchaser ?? '').trim().replace(/,/g, ' ');
-    // Only emit SOLD rows (price > 0). A 0 is ambiguous (RNA vs not-yet-sold for
-    // an upcoming sale) — skip it so upcoming catalogs show predictions, not RNA.
-    if (price > 0) {
+    const marker = buyer.toUpperCase();
+    // FT lists the final bid as `price` even when the reserve wasn't met, so
+    // price > 0 does NOT mean sold — the purchaser reads "NOT SOLD". Classify by
+    // the purchaser:
+    //   • "NOT SOLD" / "RNA"  → reserve not attained → explicit RNA row.
+    //   • a real purchaser     → a sale.
+    //   • empty + no price     → not sold yet (upcoming sale) → skip, so the
+    //                            catalog shows predictions rather than RNA.
+    if (marker === 'NOT SOLD' || marker === 'RNA') {
+      lines.push(`${h.hip},,true,`);
+    } else if (price > 0 && marker !== '') {
       lines.push(`${h.hip},${Math.round(price * 100)},false,${buyer}`);
     }
   }
