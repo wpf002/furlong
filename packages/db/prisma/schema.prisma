@@ -143,6 +143,12 @@ model Hip {
   // carries it; NULL until then. Displayed verbatim on the hip card.
   catalogPageText String?
 
+  // Breeding-stock only: the sire this mare is in foal to at THIS sale (a
+  // sale-specific attribute, hence on Hip not Horse). NULL = not covered /
+  // barren / maiden, or a non-breeding-stock sale. The strongest broodmare
+  // value signal — in foal to a top sire ≫ open. Feeds the broodmare model.
+  coveringSire String?
+
   result     SaleResult?
   valuations Valuation[]
 

@@ -119,6 +119,7 @@ export async function ingestCatalog(
           // so a re-ingest without it doesn't wipe a previously-captured page.
           ...(hip.catalogPageText ? { catalogPageText: hip.catalogPageText } : {}),
           ...(hip.barn ? { barn: hip.barn } : {}),
+          ...(hip.coveringSireName ? { coveringSire: hip.coveringSireName } : {}),
         },
       });
       updated += 1;
@@ -139,6 +140,7 @@ export async function ingestCatalog(
           breezeSeconds: hip.breezeSeconds ?? null,
           catalogPageText: hip.catalogPageText ?? null,
           barn: hip.barn ?? null,
+          coveringSire: hip.coveringSireName ?? null,
         },
       });
       created += 1;

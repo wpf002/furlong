@@ -39,6 +39,8 @@ export interface CatalogHip {
   /** Under-tack breeze (2YO-in-training sales only, e.g. OBS). */
   breezeTime?: string | null;
   breezeSeconds?: number | null;
+  /** Breeding-stock only: the sire the mare is in foal to (null = open/barren). */
+  coveringSireName?: string | null;
 }
 
 export interface FetchedSale {

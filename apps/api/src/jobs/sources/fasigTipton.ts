@@ -73,6 +73,7 @@ interface FtHorse {
   purchaser?: string;
   price?: unknown;
   out?: unknown;
+  covering_sire?: string;
 }
 
 async function getJson(url: string): Promise<unknown> {
@@ -117,6 +118,7 @@ function buildHips(horses: FtHorse[]): CatalogHip[] {
       damsireName: smartTitle(h.sire_of_dam),
       consignorName: smartTitle(h.consignor_name),
       breederName: null,
+      coveringSireName: smartTitle(h.covering_sire),
     };
   });
 }

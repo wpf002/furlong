@@ -26,6 +26,8 @@ export const CatalogHipSchema = z.object({
   // seconds-per-furlong; breezeTime is the raw published string for display.
   breezeTime: z.string().nullable().optional(),
   breezeSeconds: z.number().positive().nullable().optional(),
+  // Breeding-stock only: the sire this mare is in foal to (null = open/barren).
+  coveringSireName: z.string().nullable().optional(),
   // Racing record (Phase 4, horses-in-training). Optional — only a licensed
   // racing feed supplies these; yearling/breeding-stock catalogs omit them.
   racing: z

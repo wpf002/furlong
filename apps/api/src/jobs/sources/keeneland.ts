@@ -52,6 +52,7 @@ interface KeeRow {
   Dam?: string;
   Consignor?: string;
   Buyer?: string;
+  CoveringSire?: string;
   SalePrice?: unknown;
   OutIndicator?: string;
   RnaIndicator?: string;
@@ -192,6 +193,7 @@ export const keenelandAdapter: SourceAdapter = {
           damsireName: null,
           consignorName: cleanConsignor(r.Consignor),
           breederName: null,
+          coveringSireName: (r.CoveringSire ?? '').trim() || null,
         });
       }
       if (out) continue;
