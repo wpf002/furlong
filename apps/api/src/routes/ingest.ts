@@ -192,20 +192,10 @@ export async function registerIngestRoutes(app: FastifyInstance) {
       imported += 1;
     }
 
-    // A sale with results has run — its watchlists are now stale. Drop every
-    // saved shortlist item pointing at a hip in this sale (buyers keep their
-    // shortlists; only entries for the concluded sale are cleared).
-    let watchlistPruned = 0;
-    if (imported > 0) {
-      const saleHips = await prisma.hip.findMany({ where: { saleId }, select: { id: true } });
-      const hipIds = saleHips.map((h) => h.id);
-      if (hipIds.length > 0) {
-        const del = await prisma.shortlistItem.deleteMany({ where: { hipId: { in: hipIds } } });
-        watchlistPruned = del.count;
-      }
-    }
-
-    return { imported, skipped, watchlistPruned };
+    // Watchlists are KEPT after a sale runs — a saved hip becomes a post-sale
+    // review (its card now shows the actual price against our estimate), which
+    // is more useful than clearing it.
+    return { imported, skipped };
   });
 
   // 4 — Ingest horse racing records (e.g. parsed from an Equibase feed) and

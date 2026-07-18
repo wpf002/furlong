@@ -28,6 +28,22 @@ async def parse_catalog(file: UploadFile = File(...)) -> dict:
     return parse_keeneland_catalog(raw, filename=file.filename or "catalog.pdf")
 
 
+class CatalogPagesRequest(BaseModel):
+    saleId: str
+    pdfUrl: str
+    dryRun: bool = False
+
+
+@app.post("/catalog-pages")
+def catalog_pages(req: CatalogPagesRequest) -> dict:
+    """Download a sale's catalog PDF, extract each hip's black-type page, and
+    write it to Hip.catalogPageText — so pedigree grades compute for the sale.
+    Called by the ingest pipeline for FT sales; also usable for backfill."""
+    from app.parsing.catalog_pages import load_for_sale
+
+    return load_for_sale(req.saleId, req.pdfUrl, dry_run=req.dryRun)
+
+
 class FeatureRequest(BaseModel):
     hip_id: str
     features: dict

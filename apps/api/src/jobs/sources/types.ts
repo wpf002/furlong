@@ -50,6 +50,13 @@ export interface FetchedSale {
   hips: CatalogHip[];
   /** CSV body for POST /ingest/results (hipNumber,priceCents,rna,buyer). */
   resultsCsv: string;
+  /**
+   * URL of the sale's catalog PDF, if the house publishes one. The ingest
+   * pipeline fetches it to capture each hip's black-type "catalog page" text
+   * (which the structured API doesn't carry) so pedigree grades compute. Null
+   * for sources whose structured feed already includes page text, or none.
+   */
+  catalogPdfUrl?: string | null;
 }
 
 export interface SourceAdapter {

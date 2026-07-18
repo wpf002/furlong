@@ -263,6 +263,31 @@ export async function registerSaleRoutes(app: FastifyInstance) {
     return hip;
   });
 
+  // Capture each hip's black-type catalog page from the sale's catalog PDF (via
+  // the ML service) into Hip.catalogPageText — so pedigree grades compute. Used
+  // by the ingest pipeline for FT sales, and callable for backfill.
+  app.post<{ Params: { id: string }; Body: { pdfUrl?: string } }>(
+    '/sales/:id/catalog-pages',
+    async (req, reply) => {
+      const pdfUrl = req.body?.pdfUrl;
+      if (!pdfUrl) return reply.status(400).send({ error: 'pdfUrl is required' });
+      const res = await request(`${ML_SERVICE_URL}/catalog-pages`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ saleId: req.params.id, pdfUrl }),
+        headersTimeout: 300_000,
+        bodyTimeout: 300_000,
+      });
+      if (res.statusCode < 200 || res.statusCode >= 300) {
+        const text = await res.body.text();
+        return reply
+          .status(502)
+          .send({ error: `ML /catalog-pages failed: ${res.statusCode} ${text.slice(0, 200)}` });
+      }
+      return res.body.json();
+    },
+  );
+
   // 1d — Re-value all hips in a sale via the ML service.
   app.post<{ Params: { id: string } }>('/sales/:id/revalue', async (req) => {
     return revalueSale(req.params.id);

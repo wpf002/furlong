@@ -180,6 +180,23 @@ export async function runIngestSale(data: IngestSaleJobData): Promise<IngestSale
   const cJson = (await cRes.body.json()) as { saleId: string };
   const saleId = cJson.saleId;
 
+  // 1b) Catalog pages — capture each hip's black-type page from the catalog PDF
+  // (the structured feed doesn't carry it) so pedigree grades compute and feed
+  // the valuation. Best-effort: a missing/late catalog PDF never fails ingest.
+  if (fetched.catalogPdfUrl) {
+    try {
+      await request(`${jobsConfig.selfUrl}/sales/${saleId}/catalog-pages`, {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ pdfUrl: fetched.catalogPdfUrl }),
+        headersTimeout: 300_000,
+        bodyTimeout: 300_000,
+      });
+    } catch {
+      /* catalog PDF not published yet (upcoming sale) — grades fill in on a later run */
+    }
+  }
+
   // 2) Results (price / RNA / buyer).
   const form = new FormData();
   form.append('saleId', saleId);

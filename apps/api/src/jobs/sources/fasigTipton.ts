@@ -194,6 +194,16 @@ export const fasigTiptonAdapter: SourceAdapter = {
       auctionHouse: 'FASIG_TIPTON',
       hips: buildHips(horses),
       resultsCsv: buildResultsCsv(horses),
+      catalogPdfUrl: ftCatalogUrl(sale.date),
     };
   },
 };
+
+// FT publishes each catalog at /catalogs/<YYYY>/<MMDD>/web.pdf, keyed by the
+// sale's start date. The ingest pipeline fetches it for the black-type pages.
+function ftCatalogUrl(startDate?: string): string | null {
+  if (!startDate) return null;
+  const m = /(\d{4})-(\d{2})-(\d{2})/.exec(startDate);
+  if (!m) return null;
+  return `https://www.fasigtipton.com/catalogs/${m[1]}/${m[2]}${m[3]}/web.pdf`;
+}
