@@ -1,4 +1,64 @@
+import { request } from 'undici';
 import { prisma } from '@furlong/db';
+
+const ML_SERVICE_URL = process.env.ML_SERVICE_URL ?? 'http://localhost:8000';
+const TRAINED_VERSION = 'broodmare-gbm-1.0.0';
+
+interface TrainedPred {
+  predLowCents: number;
+  predHighCents: number;
+  estLowCents: number;
+  estHighCents: number;
+  confidence: number;
+  limitedComparables: boolean;
+}
+
+/**
+ * Prefer the TRAINED broodmare model (quantile GBM keyed on produce record +
+ * covering-sire/in-foal — ~2.1x held-out error vs the deterministic ~2.6x). The
+ * ML service builds features from the DB and returns a band per mare hip; we
+ * write the Valuations. Returns null when the model isn't trained or the call
+ * fails, so the deterministic path below takes over — a valuation always lands.
+ */
+async function valuateBroodmareTrained(saleId: string): Promise<BroodmareValueResult | null> {
+  let preds: Record<string, TrainedPred>;
+  try {
+    const res = await request(`${ML_SERVICE_URL}/value-broodmare-sale`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ saleId }),
+      headersTimeout: 120_000,
+      bodyTimeout: 120_000,
+    });
+    if (res.statusCode < 200 || res.statusCode >= 300) return null;
+    const json = (await res.body.json()) as { predictions?: Record<string, TrainedPred> };
+    preds = json.predictions ?? {};
+  } catch {
+    return null;
+  }
+  const entries = Object.entries(preds);
+  if (entries.length === 0) return null;
+
+  let valued = 0;
+  for (const [hipId, p] of entries) {
+    await prisma.valuation.create({
+      data: {
+        hipId,
+        estValueLowCents: BigInt(Math.round(p.estLowCents)),
+        estValueHighCents: BigInt(Math.round(p.estHighCents)),
+        predPriceLowCents: BigInt(Math.round(p.predLowCents)),
+        predPriceHighCents: BigInt(Math.round(p.predHighCents)),
+        confidence: p.confidence,
+        hiddenGemScore: null,
+        limitedComparables: p.limitedComparables,
+        modelVersion: TRAINED_VERSION,
+        features: {},
+      },
+    });
+    valued += 1;
+  }
+  return { valued };
+}
 
 /**
  * Phase 4 — broodmare valuation (a working non-yearling path).
@@ -139,8 +199,12 @@ export interface BroodmareValueResult {
   valued: number;
 }
 
-/** Value every broodmare in a BREEDING_STOCK sale by produce tier. */
+/** Value every broodmare in a BREEDING_STOCK sale — trained model first, with
+ * the deterministic produce-tier model as a fallback. */
 export async function valuateBroodmareSale(saleId: string): Promise<BroodmareValueResult> {
+  const trained = await valuateBroodmareTrained(saleId);
+  if (trained) return trained;
+
   const { produce, tiers, noProduce } = await buildTiers();
   const bounds = tiers.map((t) => t.maxFoalCents);
 

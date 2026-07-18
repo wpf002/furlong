@@ -44,6 +44,31 @@ def catalog_pages(req: CatalogPagesRequest) -> dict:
     return load_for_sale(req.saleId, req.pdfUrl, dry_run=req.dryRun)
 
 
+@app.post("/train-broodmare")
+def train_broodmare_ep() -> dict:
+    """Fit + save the trained broodmare model (quantile GBM on breeding-stock
+    mares, keyed on produce record + covering-sire/in-foal). Returns held-out
+    accuracy. Synchronous (~seconds)."""
+    from app.valuation.broodmare_model import train_broodmare
+
+    return train_broodmare()
+
+
+class BroodmareSaleRequest(BaseModel):
+    saleId: str
+
+
+@app.post("/value-broodmare-sale")
+def value_broodmare_sale(req: BroodmareSaleRequest) -> dict:
+    """Predict a sale-price band per mare hip for a breeding-stock sale, from the
+    trained model. Returns {hipId: {predLowCents, predHighCents, estLowCents,
+    estHighCents, confidence, limitedComparables}}. Empty if the model isn't
+    trained — the caller then falls back to the deterministic model."""
+    from app.valuation.broodmare_model import predict_sale
+
+    return {"predictions": predict_sale(req.saleId)}
+
+
 class FeatureRequest(BaseModel):
     hip_id: str
     features: dict
