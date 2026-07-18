@@ -13,10 +13,8 @@ pages` endpoint (automated ingest) and the `load_catalog_pages.py` CLI (backfill
 from __future__ import annotations
 
 import re
-import subprocess
 import tempfile
 import urllib.request
-from pathlib import Path
 
 FOOTER = re.compile(r'^\s*\d{1,2}-\d{2}\s*$', re.M)  # catalog page marker e.g. "4-26"
 BLANKS = re.compile(r'\n[ \t]*\n[ \t]*\n+')  # 3+ blank lines
@@ -31,24 +29,29 @@ def clean(text: str) -> str:
 
 
 def extract(pdf_path: str) -> dict[int, str]:
-    """Map hipNumber -> cleaned catalog-page text for every page that carries a hip."""
-    import fitz
+    """Map hipNumber -> cleaned catalog-page text for every page that carries a hip.
 
-    layout = subprocess.run(
-        ['pdftotext', '-layout', pdf_path, '-'], capture_output=True, text=True, check=True
-    ).stdout
-    pages = layout.split('\f')
-    doc = fitz.open(pdf_path)
+    Uses pdfplumber's layout mode (pure-Python; no system `pdftotext` binary) to
+    preserve the pedigree-tree columns, and PyMuPDF (fitz) for reliable hip-number
+    detection. One page == one hip.
+    """
+    import fitz
+    import pdfplumber
+
     out: dict[int, str] = {}
-    for pno in range(len(doc)):
-        ftext = doc[pno].get_text()
-        m = re.search(r'Hip No\.\s*\n\s*(\d+)', ftext) or re.search(r'\n\s*(\d{1,4})\s*\n\s*Barn', ftext)
-        if not m:
-            continue
-        hip = int(m.group(1))
-        body = clean(pages[pno]) if pno < len(pages) else clean(ftext)
-        if len(body) > 200:  # skip index / condition pages that slipped the hip regex
-            out[hip] = body
+    doc = fitz.open(pdf_path)
+    with pdfplumber.open(pdf_path) as pdf:
+        for pno, page in enumerate(pdf.pages):
+            ftext = doc[pno].get_text() if pno < len(doc) else ''
+            m = re.search(r'Hip No\.\s*\n\s*(\d+)', ftext) or re.search(
+                r'\n\s*(\d{1,4})\s*\n\s*Barn', ftext
+            )
+            if not m:
+                continue
+            hip = int(m.group(1))
+            body = clean(page.extract_text(layout=True) or '')
+            if len(body) > 200:  # skip index / condition pages that slipped the hip regex
+                out[hip] = body
     return out
 
 
