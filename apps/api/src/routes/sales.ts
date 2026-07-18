@@ -18,38 +18,60 @@ export async function registerSaleRoutes(app: FastifyInstance) {
   // ?status=all / omitted → everything, sorted newest first
   app.get<{ Querystring: { status?: string } }>('/sales', async (req) => {
     const status = req.query.status ?? 'all';
-    const thisYear = new Date().getUTCFullYear();
+    const now = new Date();
+    const thisYear = now.getUTCFullYear();
 
-    // Upcoming = current year and later (whether dated or not).
-    // Past = any year before the current year.
-    // This is robust against historical sales that were ingested without dates.
-    const where =
-      status === 'upcoming'
-        ? { year: { gte: thisYear } }
-        : status === 'past'
-          ? { year: { lt: thisYear } }
-          : undefined;
-
-    // Upcoming: ascending so the most imminent sale is first, undated future
-    // sales (no date announced yet) fall to the bottom.
-    // Past / all: descending so the most recent year leads.
-    const orderBy =
-      status === 'upcoming'
-        ? [
-            { year: 'asc' as const },
-            { startDate: { sort: 'asc' as const, nulls: 'last' as const } },
-          ]
-        : [
-            { year: 'desc' as const },
-            { startDate: { sort: 'desc' as const, nulls: 'first' as const } },
-          ];
-
+    // A sale is CONCLUDED (→ archive) once it has actually run: any realized
+    // result is loaded, OR its start date has passed. Undated sales fall back to
+    // the year. Everything else is UPCOMING. This is what makes a just-finished
+    // sale drop out of the home/auction views and into the archive immediately,
+    // and the next sale become the default — driven by real state, not the year.
     const sales = await prisma.sale.findMany({
-      where,
-      orderBy,
-      include: { _count: { select: { hips: true } } },
+      include: {
+        _count: { select: { hips: true } },
+        // Existence probe: does any hip in this sale have a result?
+        hips: { where: { result: { isNot: null } }, take: 1, select: { id: true } },
+      },
     });
-    return sales.map(({ _count, ...s }) => ({ ...s, hipCount: _count.hips }));
+
+    const mapped = sales.map((sale) => {
+      const { _count, hips: probe, ...s } = sale;
+      const concluded =
+        probe.length > 0
+          ? true // has ≥1 realized result
+          : s.startDate
+            ? s.startDate.getTime() < now.getTime()
+            : s.year < thisYear; // undated: fall back to the year
+      return { ...s, hipCount: _count.hips, concluded };
+    });
+
+    const filtered =
+      status === 'upcoming'
+        ? mapped.filter((s) => !s.concluded)
+        : status === 'past'
+          ? mapped.filter((s) => s.concluded)
+          : mapped;
+
+    // Upcoming: soonest first (undated future sinks). Past/all: most recent first.
+    const dateVal = (d: Date | null) => (d ? d.getTime() : null);
+    filtered.sort((a, b) => {
+      if (status === 'upcoming') {
+        const ad = dateVal(a.startDate);
+        const bd = dateVal(b.startDate);
+        if (ad != null && bd != null) return ad - bd;
+        if (ad != null) return -1;
+        if (bd != null) return 1;
+        return a.year - b.year;
+      }
+      const ad = dateVal(a.startDate);
+      const bd = dateVal(b.startDate);
+      if (ad != null && bd != null) return bd - ad;
+      if (ad != null) return -1;
+      if (bd != null) return 1;
+      return b.year - a.year;
+    });
+
+    return filtered;
   });
 
   // Hips for a sale, with horse + latest valuation + pedigree grade.

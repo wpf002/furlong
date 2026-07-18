@@ -192,7 +192,20 @@ export async function registerIngestRoutes(app: FastifyInstance) {
       imported += 1;
     }
 
-    return { imported, skipped };
+    // A sale with results has run — its watchlists are now stale. Drop every
+    // saved shortlist item pointing at a hip in this sale (buyers keep their
+    // shortlists; only entries for the concluded sale are cleared).
+    let watchlistPruned = 0;
+    if (imported > 0) {
+      const saleHips = await prisma.hip.findMany({ where: { saleId }, select: { id: true } });
+      const hipIds = saleHips.map((h) => h.id);
+      if (hipIds.length > 0) {
+        const del = await prisma.shortlistItem.deleteMany({ where: { hipId: { in: hipIds } } });
+        watchlistPruned = del.count;
+      }
+    }
+
+    return { imported, skipped, watchlistPruned };
   });
 
   // 4 — Ingest horse racing records (e.g. parsed from an Equibase feed) and
