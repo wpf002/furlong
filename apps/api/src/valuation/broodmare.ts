@@ -2,7 +2,7 @@ import { request } from 'undici';
 import { prisma } from '@furlong/db';
 
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL ?? 'http://localhost:8000';
-const TRAINED_VERSION = 'broodmare-gbm-1.0.0';
+const TRAINED_VERSION = 'broodmare-gbm-1.1.0'; // 1.1: calibrated 50%-coverage band
 
 interface TrainedPred {
   predLowCents: number;
