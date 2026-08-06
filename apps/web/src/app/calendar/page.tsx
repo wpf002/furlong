@@ -39,8 +39,9 @@ export default function CalendarPage() {
     };
   }, []);
 
-  // Group by year (desc); within a year, upcoming first then by start date.
-  // Only show current year and forward — past years belong in Archive.
+  // Group by year, nearest first (2026 before 2027); within a year, upcoming
+  // first then by start date. Only show current year and forward — past years
+  // belong in Archive.
   const grouped = useMemo(() => {
     if (!sales) return [];
     const thisYear = new Date().getFullYear();
@@ -51,7 +52,7 @@ export default function CalendarPage() {
       byYear.set(s.year, arr);
     }
     return [...byYear.entries()]
-      .sort((a, b) => b[0] - a[0])
+      .sort((a, b) => a[0] - b[0])
       .map(([year, list]) => ({
         year,
         hasUpcoming: list.some((s) => s.upcoming),
@@ -64,8 +65,8 @@ export default function CalendarPage() {
       }));
   }, [sales]);
 
-  // The most recent year stays expanded; all previous years collapse into
-  // dropdowns that start closed.
+  // The nearest (current) year stays expanded; later years collapse into
+  // dropdowns that start closed unless they hold upcoming sales.
   const latestYear = grouped[0]?.year ?? null;
 
   return (
