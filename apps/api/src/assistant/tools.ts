@@ -35,7 +35,7 @@ export const TOOLS = [
   {
     name: 'search_hips',
     description:
-      'Search hips across all sales (or one sale via saleId). Filter by sire, dam, consignor, sex, budget (cents), hidden-gems-only, or sold-only. Use for questions like "find all horses by Into Mischief" or "colts consigned by Taylor Made under $200k".',
+      'Search hips across all sales (or one sale via saleId). Filter by sire, dam, consignor, sex, budget (cents), sold-only, or specific hip numbers. Use for questions like "find all horses by Into Mischief" or "colts consigned by Taylor Made under $200k". If specific hip numbers are missing from the sale the user named, re-search those hipNumbers WITHOUT saleId to find which sale they belong to — hip numbers are per-sale, and some houses number sibling catalogs as one sequence.',
     input_schema: {
       type: 'object',
       properties: {
@@ -44,15 +44,19 @@ export const TOOLS = [
         consignorName: { type: 'string' },
         sex: { type: 'string', enum: ['COLT', 'FILLY', 'GELDING', 'MARE', 'STALLION'] },
         saleId: { type: 'string', description: 'Scope to one sale (from list_sales).' },
+        hipNumbers: {
+          type: 'array',
+          items: { type: 'integer' },
+          description: 'Look up specific hip numbers (with saleId, or across all sales without it).',
+        },
         minPriceCents: { type: 'integer' },
         maxPriceCents: { type: 'integer' },
-        hiddenGemsOnly: { type: 'boolean' },
         soldOnly: { type: 'boolean', description: 'Only hips that have already sold.' },
         sortBy: {
           type: 'string',
-          enum: ['price_high', 'price_low', 'hidden_gem'],
+          enum: ['price_high', 'price_low'],
           description:
-            'Order before truncating — use price_high for "priciest/top", price_low for "cheapest", hidden_gem for best value. Default is by sale then hip number.',
+            'Order before truncating — use price_high for "priciest/top", price_low for "cheapest". Default is by sale then hip number.',
         },
         limit: { type: 'integer', description: 'Max rows to return (default 25, max 50).' },
       },
@@ -153,6 +157,9 @@ async function listSales(input: Record<string, unknown>) {
 async function searchHips(input: Record<string, unknown>) {
   const where: Record<string, unknown> = {};
   if (input.saleId) where.saleId = String(input.saleId);
+  if (Array.isArray(input.hipNumbers) && input.hipNumbers.length) {
+    where.hipNumber = { in: input.hipNumbers.map((x) => Number(x)).filter(Number.isInteger) };
+  }
   const horse: Record<string, unknown> = {};
   if (input.sex) horse.sex = String(input.sex).toUpperCase();
   const sireNorm = normalizeEntityName(input.sireName ? String(input.sireName) : null);
@@ -179,12 +186,6 @@ async function searchHips(input: Record<string, unknown>) {
   });
 
   let out = rows;
-  if (input.hiddenGemsOnly) {
-    out = out.filter((h) => {
-      const v = h.valuations[0];
-      return v && v.hiddenGemScore != null && v.hiddenGemScore > 0;
-    });
-  }
   if (input.soldOnly) {
     out = out.filter((h) => h.result && !h.result.rna && h.result.priceCents != null);
   }
@@ -217,9 +218,6 @@ async function searchHips(input: Record<string, unknown>) {
   const sortBy = String(input.sortBy ?? '');
   if (sortBy === 'price_high') out.sort((a, b) => priceOf(b) - priceOf(a));
   else if (sortBy === 'price_low') out.sort((a, b) => priceOf(a) - priceOf(b));
-  else if (sortBy === 'hidden_gem') {
-    out.sort((a, b) => (b.valuations[0]?.hiddenGemScore ?? -1) - (a.valuations[0]?.hiddenGemScore ?? -1));
-  }
 
   const total = out.length;
   const limit = Math.min(Number(input.limit ?? 25) || 25, 50);

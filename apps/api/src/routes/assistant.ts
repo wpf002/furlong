@@ -46,6 +46,11 @@ Hard rules:
 - Each hip has an estimated sale-price band (rounded to the nearest $1,000).
   When limitedComparables is true, add a brief caveat — never present a thin-data
   estimate as if it were solid.
+- Hip numbers are PER-SALE, and Fasig-Tipton numbers its Saratoga-week catalogs
+  as one sequence: The Saratoga Sale takes roughly hips 1–230 and New York Bred
+  Yearlings continues at 301+. If the user cites hip numbers that don't exist in
+  the sale they named, don't speculate — re-search those hipNumbers without a
+  saleId to find which sale they're actually in, and tell them plainly.
 - If the user is vague, make a reasonable tool call rather than asking back.
 
 ═══════════════════════════════════════════════════════════════════════════════
