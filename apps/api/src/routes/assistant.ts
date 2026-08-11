@@ -94,7 +94,15 @@ export async function registerAssistantRoutes(app: FastifyInstance) {
           'anthropic-version': '2023-06-01',
           'content-type': 'application/json',
         },
-        body: JSON.stringify({ model, max_tokens: maxTokens, system: SYSTEM, tools: TOOLS, messages }),
+        body: JSON.stringify({
+          model,
+          max_tokens: maxTokens,
+          // Date injected per-request so "upcoming vs already ran" reasoning is
+          // grounded — the model must not infer sale status from the year.
+          system: `${SYSTEM}\n\nToday's date: ${new Date().toISOString().slice(0, 10)}.`,
+          tools: TOOLS,
+          messages,
+        }),
         headersTimeout: 60_000,
         bodyTimeout: 60_000,
       });

@@ -15,7 +15,7 @@ export const TOOLS = [
   {
     name: 'list_sales',
     description:
-      'List sales in the catalog. Use to answer "which sales do I have", or to find a sale id to scope a hip search. Optionally filter by category, year, or auction house.',
+      'List sales in the catalog. Use to answer "which sales do I have", or to find a sale id to scope a hip search. Each sale carries a status: "upcoming" (has not run yet) or "concluded" (already ran — results in, or start date passed). When the user asks about an upcoming sale, filter status="upcoming" — never infer upcoming from the year. Optionally filter by category, year, or auction house.',
     input_schema: {
       type: 'object',
       properties: {
@@ -28,6 +28,7 @@ export const TOOLS = [
           type: 'string',
           enum: ['KEENELAND', 'FASIG_TIPTON', 'TATTERSALLS', 'GOFFS', 'OBS', 'INGLIS'],
         },
+        status: { type: 'string', enum: ['upcoming', 'concluded'] },
       },
     },
   },
@@ -102,29 +103,50 @@ async function listSales(input: Record<string, unknown>) {
   const sales = await prisma.sale.findMany({
     where,
     orderBy: [{ year: 'desc' }, { name: 'asc' }],
-    include: { _count: { select: { hips: true } } },
+    include: {
+      _count: { select: { hips: true } },
+      // Existence probe: any realized result means the sale has run.
+      hips: { where: { result: { isNot: null } }, take: 1, select: { id: true } },
+    },
   });
-  // Accurate aggregate counts over the FULL set (the sales list below is capped).
+  // Same real-state lifecycle as GET /sales: a sale is CONCLUDED once it has any
+  // realized result OR its start date has passed (undated: year fallback) —
+  // never guess "upcoming" from the year alone.
+  const now = Date.now();
+  const thisYear = new Date().getUTCFullYear();
+  const status = (s: (typeof sales)[number]): 'upcoming' | 'concluded' =>
+    s.hips.length > 0 || (s.startDate ? s.startDate.getTime() < now : s.year < thisYear)
+      ? 'concluded'
+      : 'upcoming';
+
+  let mapped = sales.map((s) => ({
+    id: s.id,
+    house: s.auctionHouse,
+    name: s.name,
+    year: s.year,
+    startDate: s.startDate ? s.startDate.toISOString().slice(0, 10) : null,
+    status: status(s),
+    category: s.category,
+    currency: s.currency,
+    hips: s._count.hips,
+  }));
+  if (input.status === 'upcoming' || input.status === 'concluded') {
+    mapped = mapped.filter((s) => s.status === input.status);
+  }
+
+  // Accurate aggregate counts over the FULL (filtered) set (the list is capped).
   const byHouse: Record<string, number> = {};
   const byCategory: Record<string, number> = {};
-  for (const s of sales) {
-    byHouse[s.auctionHouse] = (byHouse[s.auctionHouse] ?? 0) + 1;
+  for (const s of mapped) {
+    byHouse[s.house] = (byHouse[s.house] ?? 0) + 1;
     byCategory[s.category] = (byCategory[s.category] ?? 0) + 1;
   }
   return {
-    count: sales.length,
+    count: mapped.length,
     byHouse,
     byCategory,
-    note: sales.length > 80 ? 'sales[] is capped at 80; byHouse/byCategory are exact totals' : undefined,
-    sales: sales.slice(0, 80).map((s) => ({
-      id: s.id,
-      house: s.auctionHouse,
-      name: s.name,
-      year: s.year,
-      category: s.category,
-      currency: s.currency,
-      hips: s._count.hips,
-    })),
+    note: mapped.length > 80 ? 'sales[] is capped at 80; byHouse/byCategory are exact totals' : undefined,
+    sales: mapped.slice(0, 80),
   };
 }
 
