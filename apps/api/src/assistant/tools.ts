@@ -5,7 +5,7 @@
  * it never sets a number).
  */
 import { prisma } from '@furlong/db';
-import { normalizeEntityName, formatMoney } from '@furlong/shared';
+import { normalizeEntityName, formatMoney, formatMoneyRounded } from '@furlong/shared';
 import { lookupHelp } from './help.js';
 
 const n = (v: bigint | number | null | undefined): number | null =>
@@ -246,7 +246,9 @@ async function searchHips(input: Record<string, unknown>) {
       consignor: h.consignor?.name ?? null,
       soldFor: sold != null ? formatMoney(sold, cur) : null,
       estimate: v
-        ? `${formatMoney(n(v.predPriceLowCents)!, cur)}–${formatMoney(n(v.predPriceHighCents)!, cur)}`
+        // Estimates round to the nearest $1,000, matching the app's display —
+        // actual sold prices stay exact.
+        ? `${formatMoneyRounded(n(v.predPriceLowCents)!, cur)}–${formatMoneyRounded(n(v.predPriceHighCents)!, cur)}`
         : null,
       // limitedComparables surfaces the thin-data warning so Secretariat can
       // caveat rather than over-trust a sparse estimate.
