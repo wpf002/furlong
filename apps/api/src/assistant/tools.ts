@@ -84,6 +84,17 @@ export const TOOLS = [
   },
 ] as const;
 
+// Display names for house enums — keeps raw enum values ("FASIG_TIPTON") out of
+// Secretariat's prose.
+const HOUSE_LABEL: Record<string, string> = {
+  FASIG_TIPTON: 'Fasig-Tipton',
+  KEENELAND: 'Keeneland',
+  TATTERSALLS: 'Tattersalls',
+  GOFFS: 'Goffs',
+  OBS: 'OBS',
+  INGLIS: 'Inglis',
+};
+
 export async function executeTool(name: string, input: Record<string, unknown>): Promise<unknown> {
   switch (name) {
     case 'list_sales':
@@ -228,7 +239,7 @@ async function searchHips(input: Record<string, unknown>) {
       h.result && !h.result.rna && h.result.priceCents != null ? n(h.result.priceCents) : null;
     return {
       hip: h.hipNumber,
-      sale: `${h.sale.auctionHouse} ${h.sale.name} ${h.sale.year}`,
+      sale: `${HOUSE_LABEL[h.sale.auctionHouse] ?? h.sale.auctionHouse} ${h.sale.name} ${h.sale.year}`,
       sire: h.horse.sire?.name ?? null,
       dam: h.horse.dam?.name ?? null,
       sex: h.horse.sex,
