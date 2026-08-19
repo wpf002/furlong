@@ -3,6 +3,7 @@ import { prisma } from '@furlong/db';
 import { numberToCents } from '@furlong/shared';
 import { requireUser } from '../auth.js';
 import { runSearch } from '../search/runSearch.js';
+import { pruneConcludedShortlistItems } from '../shortlistPrune.js';
 
 export async function registerBuyerRoutes(app: FastifyInstance) {
   // ---- Buyer profile ----
@@ -87,6 +88,9 @@ export async function registerBuyerRoutes(app: FastifyInstance) {
   app.get('/me/shortlists', async (req, reply) => {
     const u = await requireUser(req, reply);
     if (!u) return;
+    // Clear entries for sales that have finished (date passed or results in)
+    // so a buyer's shortlists only ever hold live prospects.
+    await pruneConcludedShortlistItems(u.id);
     const lists = await prisma.shortlist.findMany({
       where: { userId: u.id },
       include: { _count: { select: { items: true } } },

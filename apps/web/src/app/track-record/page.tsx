@@ -16,6 +16,8 @@ const bias = (x: number) => `${x >= 0 ? '+' : '−'}${Math.abs(Math.round(x * 10
 export default function TrackRecordPage() {
   const [data, setData] = useState<TrackRecord | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState(0);
+  const PAGE = 10;
 
   useEffect(() => {
     let cancelled = false;
@@ -70,7 +72,7 @@ export default function TrackRecordPage() {
               </tr>
             </thead>
             <tbody>
-              {data.sales.map((s) => (
+              {data.sales.slice(page * PAGE, page * PAGE + PAGE).map((s) => (
                 <tr key={s.saleId} className="border-b border-ink/5 last:border-0">
                   <td className="px-4 py-3">
                     <div className="font-medium text-ink-900">
@@ -97,6 +99,34 @@ export default function TrackRecordPage() {
               ))}
             </tbody>
           </table>
+          {data.sales.length > PAGE && (
+            <div className="flex items-center justify-between border-t border-ink/10 bg-paper-50 px-4 py-3 text-xs text-ink-600">
+              <span className="tnum">
+                {page * PAGE + 1}–{Math.min((page + 1) * PAGE, data.sales.length)} of{' '}
+                {data.sales.length} sales
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setPage((p) => Math.max(0, p - 1))}
+                  disabled={page === 0}
+                  className="rounded-lg border border-ink/15 bg-paper-50 px-3 py-1.5 font-medium text-ink-700 transition hover:border-brass-400 hover:text-ink-900 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Previous
+                </button>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setPage((p) => Math.min(Math.ceil(data.sales.length / PAGE) - 1, p + 1))
+                  }
+                  disabled={(page + 1) * PAGE >= data.sales.length}
+                  className="rounded-lg border border-ink/15 bg-paper-50 px-3 py-1.5 font-medium text-ink-700 transition hover:border-brass-400 hover:text-ink-900 disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       )}
 

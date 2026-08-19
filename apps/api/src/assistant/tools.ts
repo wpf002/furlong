@@ -5,7 +5,13 @@
  * it never sets a number).
  */
 import { prisma } from '@furlong/db';
-import { normalizeEntityName, formatMoney, formatMoneyRounded } from '@furlong/shared';
+import {
+  normalizeEntityName,
+  formatMoney,
+  formatMoneyRounded,
+  scoreValuation,
+  aggregateScores,
+} from '@furlong/shared';
 import { lookupHelp } from './help.js';
 
 const n = (v: bigint | number | null | undefined): number | null =>
@@ -73,6 +79,17 @@ export const TOOLS = [
     },
   },
   {
+    name: 'sale_scorecard',
+    description:
+      "How the model's estimates ACTUALLY did on a concluded sale, scored against realized hammer prices: in-estimate %, median miss, error factor, market bias, and the biggest misses (over- and under-predictions). Use for 'how accurate were you', 'lessons learned from the July sale', 'where did the model miss', or to caveat estimates for an upcoming sale with how similar past sales scored. Omit saleId for the pooled track record across all scored sales.",
+    input_schema: {
+      type: 'object',
+      properties: {
+        saleId: { type: 'string', description: 'A concluded sale (from list_sales). Omit for overall.' },
+      },
+    },
+  },
+  {
     name: 'app_help',
     description:
       'Explain how a Furlong feature works (shortlists, alerts, valuation, compare, breeze, calendar, profile, search). Use for "how do shortlists work" style questions.',
@@ -95,6 +112,75 @@ const HOUSE_LABEL: Record<string, string> = {
   INGLIS: 'Inglis',
 };
 
+/**
+ * Lessons-learned data: the model's estimates scored against a concluded sale's
+ * realized prices. Same scoring as the Track Record page, plus the biggest
+ * over- and under-predictions with their sire/consignor so the assistant can
+ * describe WHERE it missed, not just by how much.
+ */
+async function saleScorecard(input: Record<string, unknown>) {
+  const saleId = input.saleId ? String(input.saleId) : null;
+  const where = saleId ? { saleId } : { sale: { year: { gte: 2024 } } };
+  const hips = await prisma.hip.findMany({
+    where,
+    include: {
+      sale: true,
+      result: true,
+      horse: { include: { sire: true } },
+      consignor: true,
+      valuations: { orderBy: { createdAt: 'desc' }, take: 1 },
+    },
+  });
+  const scored = hips.flatMap((h) => {
+    const price = h.result && !h.result.rna ? h.result.priceCents : null;
+    const v = h.valuations[0];
+    if (price == null || !v) return [];
+    const s = scoreValuation(price, v);
+    if (!s) return [];
+    const cur = h.sale.currency;
+    return [
+      {
+        hip: h.hipNumber,
+        sale: `${HOUSE_LABEL[h.sale.auctionHouse] ?? h.sale.auctionHouse} ${h.sale.name} ${h.sale.year}`,
+        sire: h.horse.sire?.name ?? null,
+        consignor: h.consignor?.name ?? null,
+        soldFor: formatMoney(s.actualCents, cur),
+        estimateMid: formatMoneyRounded(s.predMidCents, cur),
+        deltaPct: Math.round(s.predDeltaPct * 100), // + = sold above our estimate
+        withinEstimate: s.withinPredBand,
+        _abs: s.predAbsPctError,
+        _s: s,
+      },
+    ];
+  });
+  const card = aggregateScores(scored.map((x) => x._s));
+  if (!card) {
+    return {
+      scored: 0,
+      note: saleId
+        ? 'No scored results for this sale — it may not have run yet, or results are not loaded.'
+        : 'No scored sales yet.',
+    };
+  }
+  const strip = (x: (typeof scored)[number]) => {
+    const { _abs, _s, ...rest } = x;
+    void _abs;
+    void _s;
+    return rest;
+  };
+  const byMiss = [...scored].sort((a, b) => b._abs - a._abs);
+  return {
+    scored: card.n,
+    inEstimatePct: Math.round(card.pctWithinPredBand * 100),
+    medianMissPct: Math.round(card.medianAbsPctError * 100),
+    errorFactor: Number(card.medianErrorFactor.toFixed(2)),
+    marketVsUsPct: Math.round(card.medianDeltaPct * 100), // + = market paid above us
+    biggestOverPredictions: byMiss.filter((x) => x.deltaPct < 0).slice(0, 5).map(strip),
+    biggestUnderPredictions: byMiss.filter((x) => x.deltaPct > 0).slice(0, 5).map(strip),
+    note: 'deltaPct is signed: negative = sold BELOW our estimate (we over-predicted); positive = sold above.',
+  };
+}
+
 export async function executeTool(name: string, input: Record<string, unknown>): Promise<unknown> {
   switch (name) {
     case 'list_sales':
@@ -103,6 +189,8 @@ export async function executeTool(name: string, input: Record<string, unknown>):
       return searchHips(input);
     case 'compare_sire':
       return compareSire(input);
+    case 'sale_scorecard':
+      return saleScorecard(input);
     case 'app_help':
       return { answer: lookupHelp(String(input.topic ?? '')) };
     default:

@@ -5,6 +5,7 @@ import { ParseCatalogResponseSchema, numberToCents, normalizeEntityName } from '
 import { ingestCatalog } from '../ingest/ingestCatalog.js';
 import { parseCsv } from '../ingest/csv.js';
 import { createCatalogDropAlerts } from '../alerts.js';
+import { pruneConcludedShortlistItems } from '../shortlistPrune.js';
 
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL ?? 'http://localhost:8000';
 
@@ -192,10 +193,10 @@ export async function registerIngestRoutes(app: FastifyInstance) {
       imported += 1;
     }
 
-    // Watchlists are KEPT after a sale runs — a saved hip becomes a post-sale
-    // review (its card now shows the actual price against our estimate), which
-    // is more useful than clearing it.
-    return { imported, skipped };
+    // Results mean the sale has run — clear every shortlist entry for concluded
+    // sales (buyers keep their shortlists; only finished-sale entries go).
+    const watchlistPruned = imported > 0 ? await pruneConcludedShortlistItems() : 0;
+    return { imported, skipped, watchlistPruned };
   });
 
   // 4 — Ingest horse racing records (e.g. parsed from an Equibase feed) and
