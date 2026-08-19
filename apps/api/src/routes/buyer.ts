@@ -232,10 +232,17 @@ export async function registerBuyerRoutes(app: FastifyInstance) {
   // ---- Auction calendar ----
   app.get('/calendar', async () => {
     const sales = await prisma.sale.findMany({
-      include: { _count: { select: { hips: true } } },
+      include: {
+        _count: { select: { hips: true } },
+        // Existence probe: any realized result means the sale has run.
+        hips: { where: { result: { isNot: null } }, take: 1, select: { id: true } },
+      },
       orderBy: [{ year: 'desc' }, { auctionHouse: 'asc' }, { name: 'asc' }],
     });
-    const currentYear = new Date().getFullYear();
+    // Same real-state lifecycle as GET /sales: a sale is upcoming only until it
+    // has a realized result OR its start date passes (undated: year fallback).
+    const now = Date.now();
+    const currentYear = new Date().getUTCFullYear();
     return sales.map((s) => ({
       id: s.id,
       auctionHouse: s.auctionHouse,
@@ -245,7 +252,10 @@ export async function registerBuyerRoutes(app: FastifyInstance) {
       category: s.category,
       startDate: s.startDate,
       hipCount: s._count.hips,
-      upcoming: s.year >= currentYear,
+      upcoming: !(
+        s.hips.length > 0 ||
+        (s.startDate ? s.startDate.getTime() < now : s.year < currentYear)
+      ),
     }));
   });
 }

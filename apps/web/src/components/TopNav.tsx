@@ -60,7 +60,7 @@ export function TopNav() {
             <Link
               key={item.href}
               href={item.href}
-              className={`rounded-lg px-2.5 py-1.5 text-sm font-medium transition lg:px-3 ${
+              className={`whitespace-nowrap rounded-lg px-2.5 py-1.5 text-sm font-medium transition lg:px-3 ${
                 isActive(pathname, item.href)
                   ? 'bg-racing-800 text-paper-50'
                   : 'text-ink-600 hover:bg-ink/5 hover:text-ink-900'
