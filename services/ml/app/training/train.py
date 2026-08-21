@@ -90,6 +90,7 @@ VALUE_NUMERIC = ["sire_prior_mean", "sire_prior_count",
                  "dam_prior_mean", "dam_prior_count",
                  "sire_studfee_log", "sire_eps_log", "sire_swpct",
                  "pedigree_score",  # catalog black-type score — pure pedigree merit
+                 "sire_own_earnings_log",  # sire's own race record — pure pedigree merit
                  "market_prior_mean", "year"]
 VALUE_CATEGORICAL = ["sex", "color"]
 
