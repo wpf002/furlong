@@ -265,3 +265,77 @@ model ShortlistItem {
 
   @@unique([shortlistId, hipId])
 }
+
+// ---------------------------------------------------------------------------
+// Race-form archive (2024-01-01 →). Built from the licensed results feed we are
+// permitted to ingest, because Equibase / DRF / Brisnet all declined app use.
+//
+// One row per horse per race. An auction app reads this differently than a
+// handicapping app: for a yearling or weanling the horse's OWN record is empty
+// by definition, so the value is in FAMILY data — sire/dam progeny performance
+// and sibling results, both reached through the pedigree keys captured here.
+// ---------------------------------------------------------------------------
+model HorseFormLine {
+  id String @id @default(cuid())
+
+  // Join keys. regNumber (from the entries endpoint) is authoritative when the
+  // feed supplies it; horseKey is the punctuation-stripped name fallback, so
+  // "O'Brien's Lad" and "OBriens Lad" resolve to one horse.
+  horseKey  String
+  horseName String
+  regNumber String?
+
+  raceId String
+  date   DateTime
+  track  String
+  region String?
+
+  // NULL finish = an also-ran: the horse RAN and finished off the board. Never
+  // omit these — a beaten horse with no row would read as unraced.
+  finishPos Int?
+  fieldSize Int?
+
+  distanceFurlongs Float?
+  surface          String?
+  going            String?
+  raceClass        String?
+  grade            String? // G1 / G2 / G3 / Listed, when the feed states it
+  // Derived black type — the single biggest value driver in a sales catalogue.
+  // WIN = won a stakes/graded race; PLACED = 2nd or 3rd in one.
+  blackType        String?
+  totalPurseCents  BigInt?
+
+  jockey      String?
+  trainer     String?
+  winningTime String?
+
+  // Pedigree — the join keys for progeny and sibling queries.
+  sireName    String?
+  damName     String?
+  damSireName String?
+  sireKey     String?
+  damKey      String?
+
+  breederName String?
+  ownerName   String?
+
+  createdAt DateTime @default(now())
+
+  @@unique([horseKey, raceId])
+  @@index([horseKey])
+  @@index([sireKey])
+  @@index([damKey])
+  @@index([regNumber])
+  @@index([date])
+}
+
+// Per-date ingest ledger — makes a multi-year backfill resumable and makes a
+// partially-written day impossible to mistake for a covered one (status).
+model FormIngestDay {
+  date       DateTime @id
+  races      Int      @default(0)
+  formLines  Int      @default(0)
+  status     String   @default("ok") // ok | failed
+  error      String?
+  ingestedAt DateTime @default(now())
+}
