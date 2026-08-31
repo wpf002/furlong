@@ -109,6 +109,10 @@ export async function revalueSale(saleId: string): Promise<RevalueResult> {
     const predMid = (v.predPriceLowCents + v.predPriceHighCents) / 2;
     const hiddenGemScore = (estMid - predMid) / Math.max(predMid, 1);
 
+    // Supersede, don't accumulate: the nightly retrain re-values every sale, so
+    // keeping history grew Valuation to 6.9 GB / 10.5M rows (97% of the database)
+    // before it was pruned. Only the latest row per hip is ever read.
+    await prisma.valuation.deleteMany({ where: { hipId: hip.id } });
     await prisma.valuation.create({
       data: {
         hipId: hip.id,

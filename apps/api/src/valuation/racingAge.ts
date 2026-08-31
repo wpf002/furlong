@@ -157,6 +157,10 @@ export async function valuateRacingAgeSale(saleId: string): Promise<RacingAgeVal
     const base = hasRecord || hasBreeze ? 0.45 : 0.3;
     const confidence = clamp(base * Math.min(1, prices.length / 30) + 0.15, 0.1, 0.95);
 
+    // Supersede, don't accumulate: the nightly retrain re-values every sale, so
+    // keeping history grew Valuation to 6.9 GB / 10.5M rows (97% of the database)
+    // before it was pruned. Only the latest row per hip is ever read.
+    await prisma.valuation.deleteMany({ where: { hipId: hip.id } });
     await prisma.valuation.create({
       data: {
         hipId: hip.id,

@@ -41,6 +41,10 @@ async function valuateBroodmareTrained(saleId: string): Promise<BroodmareValueRe
 
   let valued = 0;
   for (const [hipId, p] of entries) {
+    // Supersede, don't accumulate: the nightly retrain re-values every sale, so
+    // keeping history grew Valuation to 6.9 GB / 10.5M rows (97% of the database)
+    // before it was pruned. Only the latest row per hip is ever read.
+    await prisma.valuation.deleteMany({ where: { hipId } });
     await prisma.valuation.create({
       data: {
         hipId,
@@ -255,6 +259,10 @@ export async function valuateBroodmareSale(saleId: string): Promise<BroodmareVal
     const base = (prod ? 0.5 : 0.25) * Math.min(1, b.n / 30) + 0.15;
     const confidence = clamp(base + (hasRecord ? 0.1 : 0), 0.1, 1);
 
+    // Supersede, don't accumulate: the nightly retrain re-values every sale, so
+    // keeping history grew Valuation to 6.9 GB / 10.5M rows (97% of the database)
+    // before it was pruned. Only the latest row per hip is ever read.
+    await prisma.valuation.deleteMany({ where: { hipId: hip.id } });
     await prisma.valuation.create({
       data: {
         hipId: hip.id,
