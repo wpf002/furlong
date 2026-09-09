@@ -34,17 +34,21 @@ export default defineRailway(() => {
     env: {
       PORT: '8000',
       DATABASE_URL: db.env.DATABASE_URL,
-      // The nightly /train fits 28 HistGradientBoostingRegressors (2 markets x
-      // {price, value} x 7 quantiles). sklearn's OpenMP backend defaults to
-      // every core the container sees — measured at 7.06 vCPU sustained for 5h
-      // on the 2026-09-09 run, which is the single largest line item on the
-      // Railway bill. Histogram building is memory-bandwidth bound, so those
-      // last 3 threads buy very little wall-clock for 43% more billed vCPU.
-      // 4 threads keeps the worst case (perfect scaling => 8.75h) well inside
-      // the 24h gap before the next 03:00 UTC run. Thread count does not change
-      // model output: random_state is pinned and only float accumulation order
-      // in the histogram sums varies, far below the model's MAE.
-      OMP_NUM_THREADS: '4',
+      // Pin OpenMP to one thread. Counter-intuitive but measured (sklearn
+      // 1.5.2, 120k x 21 features, the shapes this service actually sees):
+      //
+      //   training, 28 fits   7 threads 25s   1 thread 31s   (early-stops ~105
+      //                       of max_iter=400, so both beat /train's "~40s")
+      //   one /value call     7 threads 12.85ms   1 thread 11.20ms
+      //
+      // Threads do nothing for us and cost 7x the billed vCPU. /value predicts
+      // ONE row against 14 models, so OpenMP fan-out is pure spawn/join
+      // overhead — single-threaded is actually faster. The 2026-09-09 retrain
+      // held 7.06 vCPU for 4h45m (03:00-07:45 UTC) at flat memory, which is
+      // runRetrain's sequential per-hip /value loop keeping this service
+      // permanently busy, NOT the fits. See revalueSale.ts — the real fix is
+      // batching that loop; this variable just stops it burning every core.
+      OMP_NUM_THREADS: '1',
     },
   });
 
