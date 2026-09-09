@@ -34,6 +34,17 @@ export default defineRailway(() => {
     env: {
       PORT: '8000',
       DATABASE_URL: db.env.DATABASE_URL,
+      // The nightly /train fits 28 HistGradientBoostingRegressors (2 markets x
+      // {price, value} x 7 quantiles). sklearn's OpenMP backend defaults to
+      // every core the container sees — measured at 7.06 vCPU sustained for 5h
+      // on the 2026-09-09 run, which is the single largest line item on the
+      // Railway bill. Histogram building is memory-bandwidth bound, so those
+      // last 3 threads buy very little wall-clock for 43% more billed vCPU.
+      // 4 threads keeps the worst case (perfect scaling => 8.75h) well inside
+      // the 24h gap before the next 03:00 UTC run. Thread count does not change
+      // model output: random_state is pinned and only float accumulation order
+      // in the histogram sums varies, far below the model's MAE.
+      OMP_NUM_THREADS: '4',
     },
   });
 
