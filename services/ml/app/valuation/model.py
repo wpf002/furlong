@@ -356,13 +356,30 @@ def current_metrics() -> dict | None:
 
 def predict(features: dict) -> dict:
     """Phase 2 trained model when available; comparables baseline as fallback."""
+    return predict_many([features])[0]
+
+
+def predict_many(feature_list: list[dict]) -> list[dict]:
+    """Batch counterpart of predict(), same semantics per hip.
+
+    Two reasons this exists beyond the model call itself: the trained models are
+    invoked once per quantile for the whole batch rather than once per hip, and
+    the comparables fallback loads the comps table once instead of per hip.
+    """
+    if not feature_list:
+        return []
     _ensure_trained()
     try:
         from app.valuation import trained
         if trained.is_loaded():
-            result = trained.predict(features)
-            if result is not None:
-                return result
+            results = trained.predict_many(feature_list)
+            if all(r is not None for r in results):
+                return results
+            # Partial coverage: fall back per hip only where the model abstained.
+            comps = _get_comps()
+            return [r if r is not None else compute_valuation(f, comps)
+                    for r, f in zip(results, feature_list)]
     except Exception as e:  # pragma: no cover
         print("trained predict failed, falling back to comparables:", e)
-    return compute_valuation(features, _get_comps())
+    comps = _get_comps()
+    return [compute_valuation(f, comps) for f in feature_list]

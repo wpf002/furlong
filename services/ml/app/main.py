@@ -11,7 +11,7 @@ from pydantic import BaseModel
 
 from app.parsing.keeneland import parse_keeneland_catalog
 from app.valuation.model import (
-    predict, reload_comparables, current_model_version, current_metrics,
+    predict, predict_many, reload_comparables, current_model_version, current_metrics,
 )
 
 app = FastAPI(title="furlong-ml")
@@ -77,6 +77,30 @@ class FeatureRequest(BaseModel):
 @app.post("/value")
 def value(req: FeatureRequest) -> dict:
     return predict(req.features)
+
+
+class SaleValueHip(BaseModel):
+    hip_id: str
+    features: dict
+
+
+class SaleValueRequest(BaseModel):
+    hips: list[SaleValueHip]
+
+
+@app.post("/value-sale")
+def value_sale(req: SaleValueRequest) -> dict:
+    """Score a whole catalogue in one call. Same per-hip output as /value —
+    `predict` is now a one-element `predict_many` — but the models are invoked
+    once for the batch instead of once per hip. Measured on a 4,000-hip sale:
+    ~25ms batched vs ~57s hip-by-hip, because sklearn's per-call overhead
+    swamps the actual tree walk at one row.
+
+    Returns {"valuations": {hip_id: valuation}}; the caller matches on hip_id
+    rather than position.
+    """
+    results = predict_many([h.features for h in req.hips])
+    return {"valuations": {h.hip_id: r for h, r in zip(req.hips, results)}}
 
 
 @app.post("/reload-comparables")

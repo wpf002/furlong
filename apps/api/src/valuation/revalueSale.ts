@@ -1,18 +1,34 @@
 import { request } from 'undici';
+import { z } from 'zod';
 import { prisma, Prisma } from '@furlong/db';
 import { ValuationResponseSchema, numberToCents } from '@furlong/shared';
 import { pedigreeGradeForHip } from '../pedigreeGrade.js';
 
 const ML_SERVICE_URL = process.env.ML_SERVICE_URL ?? 'http://localhost:8000';
 
+// Hips per ML request and per DB write. Keeps the JSON body near a megabyte and
+// the createMany parameter count well inside Postgres' 65535 bind limit, while
+// still being large enough that per-call overhead is irrelevant.
+const CHUNK = 500;
+
+const SaleValuationResponseSchema = z.object({
+  valuations: z.record(z.string(), ValuationResponseSchema),
+});
+
 export interface RevalueResult {
   valued: number;
 }
 
 /**
- * Re-value every hip in a sale by calling the ML /value endpoint. The API never
- * invents prices — all money comes from the ML response. A new Valuation row is
- * created per hip (history is append-only).
+ * Re-value every hip in a sale via the ML /value-sale endpoint. The API never
+ * invents prices — all money comes from the ML response.
+ *
+ * Scored in batches, not hip-by-hip. The nightly retrain re-values every
+ * upcoming sale, and doing that one hip at a time (an HTTP round trip plus two
+ * Prisma writes each) held the ML service at ~7 vCPU for 4h45m on 2026-09-09 —
+ * the largest single line on the Railway bill. Almost none of it was real work:
+ * a one-row sklearn predict is nearly all per-call overhead, so a 4,000-hip
+ * sale costs ~25ms batched against ~57s hip-by-hip.
  */
 export async function revalueSale(saleId: string): Promise<RevalueResult> {
   const hips = await prisma.hip.findMany({
@@ -53,9 +69,9 @@ export async function revalueSale(saleId: string): Promise<RevalueResult> {
     }
   }
 
-  let valued = 0;
-
-  for (const hip of hips) {
+  // Phase 1: build every hip's feature vector. Pure in-memory work — no
+  // network, no DB — so the whole catalogue is ready before a single call.
+  const built = hips.map((hip) => {
     // Catalog-pedigree score (0–100): expert read where held, else the black-type
     // heuristic. The model trains on the same score (services/ml/app/pedigree.py),
     // so it's a real pricing feature, not just a badge.
@@ -88,46 +104,70 @@ export async function revalueSale(saleId: string): Promise<RevalueResult> {
       pedigreeScore,
     };
 
-    const res = await request(`${ML_SERVICE_URL}/value`, {
+    return { hip_id: hip.id, features };
+  });
+
+  let valued = 0;
+
+  for (let i = 0; i < built.length; i += CHUNK) {
+    const chunk = built.slice(i, i + CHUNK);
+
+    const res = await request(`${ML_SERVICE_URL}/value-sale`, {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ hip_id: hip.id, features }),
+      body: JSON.stringify({ hips: chunk }),
+      // One call now carries up to CHUNK hips, so it needs materially longer
+      // than a single-hip request — but the whole sale is far quicker than the
+      // per-hip loop it replaces.
+      headersTimeout: 300_000,
+      bodyTimeout: 300_000,
     });
 
     if (res.statusCode < 200 || res.statusCode >= 300) {
       const text = await res.body.text();
-      throw new Error(`ML /value failed for hip ${hip.id}: ${res.statusCode} ${text}`);
+      throw new Error(
+        `ML /value-sale failed for sale ${saleId} (hips ${i}-${i + chunk.length}): ` +
+          `${res.statusCode} ${text.slice(0, 200)}`,
+      );
     }
 
-    const json = await res.body.json();
-    const v = ValuationResponseSchema.parse(json);
+    const { valuations } = SaleValuationResponseSchema.parse(await res.body.json());
 
-    // Phase 2: est-value comes from a pedigree-only model and predicted-price
-    // from the full-context model, so the gap is a real per-hip signal — a hip
-    // whose pedigree is worth more than its predicted sale price is a hidden gem.
-    const estMid = (v.estValueLowCents + v.estValueHighCents) / 2;
-    const predMid = (v.predPriceLowCents + v.predPriceHighCents) / 2;
-    const hiddenGemScore = (estMid - predMid) / Math.max(predMid, 1);
+    const rows = chunk.map(({ hip_id, features }) => {
+      const v = valuations[hip_id];
+      if (!v) throw new Error(`ML /value-sale returned no valuation for hip ${hip_id}`);
 
-    // Supersede, don't accumulate: the nightly retrain re-values every sale, so
-    // keeping history grew Valuation to 6.9 GB / 10.5M rows (97% of the database)
-    // before it was pruned. Only the latest row per hip is ever read.
-    await prisma.valuation.deleteMany({ where: { hipId: hip.id } });
-    await prisma.valuation.create({
-      data: {
-        hipId: hip.id,
+      // Phase 2: est-value comes from a pedigree-only model and predicted-price
+      // from the full-context model, so the gap is a real per-hip signal — a hip
+      // whose pedigree is worth more than its predicted sale price is a hidden gem.
+      const estMid = (v.estValueLowCents + v.estValueHighCents) / 2;
+      const predMid = (v.predPriceLowCents + v.predPriceHighCents) / 2;
+      return {
+        hipId: hip_id,
         estValueLowCents: numberToCents(v.estValueLowCents),
         estValueHighCents: numberToCents(v.estValueHighCents),
         predPriceLowCents: numberToCents(v.predPriceLowCents),
         predPriceHighCents: numberToCents(v.predPriceHighCents),
         confidence: v.confidence,
-        hiddenGemScore,
+        hiddenGemScore: (estMid - predMid) / Math.max(predMid, 1),
         limitedComparables: v.limitedComparables,
         modelVersion: v.modelVersion,
         features: features as Prisma.InputJsonValue,
-      },
+      };
     });
-    valued += 1;
+
+    // Supersede, don't accumulate: the nightly retrain re-values every sale, so
+    // keeping history grew Valuation to 6.9 GB / 10.5M rows (97% of the database)
+    // before it was pruned. Only the latest row per hip is ever read.
+    //
+    // Delete + insert run in one transaction so a reader never observes a hip
+    // with no valuation at all; the old per-hip version left exactly that gap
+    // between its deleteMany and its create.
+    await prisma.$transaction([
+      prisma.valuation.deleteMany({ where: { hipId: { in: chunk.map((c) => c.hip_id) } } }),
+      prisma.valuation.createMany({ data: rows }),
+    ]);
+    valued += rows.length;
   }
 
   return { valued };
