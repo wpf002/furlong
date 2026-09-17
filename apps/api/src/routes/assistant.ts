@@ -14,6 +14,24 @@ import { PEDIGREE_KNOWLEDGE } from '../assistant/pedigreeKnowledge.js';
 const ANTHROPIC_URL = 'https://api.anthropic.com/v1/messages';
 const MAX_TOOL_ROUNDS = 6;
 
+/**
+ * The conversation with one cache breakpoint on its newest block.
+ *
+ * Each tool round re-sends every earlier round. A breakpoint on the newest block
+ * lets the next round read all of that back at ~0.1x instead of full price. It moves
+ * rather than accumulates — markers are not part of the cached bytes, so moving one
+ * invalidates nothing, and one per round would pass the four-breakpoint limit.
+ * `messages` is copied, never mutated.
+ */
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function withTailBreakpoint(messages: any[]): any[] {
+  const last = messages[messages.length - 1];
+  if (!last || !Array.isArray(last.content) || last.content.length === 0) return messages;
+  const blocks = [...last.content];
+  blocks[blocks.length - 1] = { ...blocks[blocks.length - 1], cache_control: { type: 'ephemeral' } };
+  return [...messages.slice(0, -1), { ...last, content: blocks }];
+}
+
 const SYSTEM = `You are Secretariat, the assistant inside Furlong — a thoroughbred auction
 intelligence app for yearling, breeding-stock, and 2YO-in-training buyers.
 
@@ -101,7 +119,13 @@ export async function registerAssistantRoutes(app: FastifyInstance) {
     const maxTokens = Number(process.env.ASSISTANT_MAX_TOKENS ?? 4096) || 4096;
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const messages: any[] = clean.map((m) => ({ role: m.role, content: m.content }));
+    // Block form throughout, so a turn renders the same bytes whether or not it is
+    // the one currently carrying the breakpoint. (The API rejects empty text blocks,
+    // so an empty string is left as it was.)
+    const messages: any[] = clean.map((m) => ({
+      role: m.role,
+      content: m.content.length > 0 ? [{ type: 'text', text: m.content }] : m.content,
+    }));
     const toolsUsed: string[] = [];
 
     for (let round = 0; round < MAX_TOOL_ROUNDS; round++) {
@@ -115,11 +139,19 @@ export async function registerAssistantRoutes(app: FastifyInstance) {
         body: JSON.stringify({
           model,
           max_tokens: maxTokens,
+          // SYSTEM carries the full pedigree knowledge base (~8,400 tokens). It was sent
+          // uncached on every round of every conversation, so it goes in its own block
+          // behind a breakpoint (which also caches TOOLS, since tools render first).
+          // The date changes daily, so it sits AFTER the breakpoint in a second block —
+          // otherwise the knowledge base would re-cache every midnight for nothing.
           // Date injected per-request so "upcoming vs already ran" reasoning is
           // grounded — the model must not infer sale status from the year.
-          system: `${SYSTEM}\n\nToday's date: ${new Date().toISOString().slice(0, 10)}.`,
+          system: [
+            { type: 'text', text: SYSTEM, cache_control: { type: 'ephemeral' } },
+            { type: 'text', text: `Today's date: ${new Date().toISOString().slice(0, 10)}.` },
+          ],
           tools: TOOLS,
-          messages,
+          messages: withTailBreakpoint(messages),
         }),
         headersTimeout: 60_000,
         bodyTimeout: 60_000,

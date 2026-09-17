@@ -79,7 +79,10 @@ export async function registerPedigreeRoutes(app: FastifyInstance) {
       body: JSON.stringify({
         model,
         max_tokens: 400,
-        system: BRIEF_SYSTEM,
+        // BRIEF_SYSTEM embeds the full pedigree knowledge base (~9,000 tokens in all)
+        // and is identical for every hip. Browsing a catalog fires one brief per hip
+        // viewed, seconds apart, so after the first each one reads it at ~0.1x.
+        system: [{ type: 'text', text: BRIEF_SYSTEM, cache_control: { type: 'ephemeral' } }],
         messages: [{ role: 'user', content: userMsg }],
       }),
       headersTimeout: 30_000,
