@@ -10,10 +10,10 @@
 import { Worker, type Job } from 'bullmq';
 import { QUEUE_NAME, jobsConfig, type IngestSaleJobData } from './config.js';
 import { getConnection, getQueue, enqueue, closeQueue } from './queue.js';
+import { runRetrainInChild } from './retrainRunner.js';
 import {
   runDiscover,
   runIngestSale,
-  runRetrain,
   runSaleSoon,
 } from './handlers.js';
 
@@ -25,7 +25,7 @@ async function processJob(job: Job): Promise<unknown> {
     case 'ingest-sale':
       return runIngestSale(job.data as IngestSaleJobData);
     case 'retrain':
-      return runRetrain((job.data as { saleId?: string })?.saleId);
+      return runRetrainInChild((job.data as { saleId?: string })?.saleId);
     case 'sale-soon':
       return runSaleSoon();
     default:

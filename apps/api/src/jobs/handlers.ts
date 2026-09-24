@@ -185,13 +185,16 @@ export async function runIngestSale(data: IngestSaleJobData): Promise<IngestSale
   // the valuation. Best-effort: a missing/late catalog PDF never fails ingest.
   if (fetched.catalogPdfUrl) {
     try {
-      await request(`${jobsConfig.selfUrl}/sales/${saleId}/catalog-pages`, {
+      const pRes = await request(`${jobsConfig.selfUrl}/sales/${saleId}/catalog-pages`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ pdfUrl: fetched.catalogPdfUrl }),
         headersTimeout: 300_000,
         bodyTimeout: 300_000,
       });
+      // Nothing here reads the body, and an undici body left unread holds its
+      // buffers and its socket until GC gets to it. Dump it explicitly.
+      await pRes.body.dump();
     } catch {
       /* catalog PDF not published yet (upcoming sale) — grades fill in on a later run */
     }
@@ -211,6 +214,10 @@ export async function runIngestSale(data: IngestSaleJobData): Promise<IngestSale
   if (rRes.statusCode >= 200 && rRes.statusCode < 300) {
     const rJson = (await rRes.body.json()) as { imported?: number };
     resultsImported = rJson.imported ?? 0;
+  } else {
+    // A failed import is survivable, an unread body is not: it keeps its
+    // buffers and socket alive in a process that runs for weeks.
+    await rRes.body.dump();
   }
 
   // 3) Value the sale (right path for its category), then raise criteria-match

@@ -30,7 +30,12 @@ async function valuateBroodmareTrained(saleId: string): Promise<BroodmareValueRe
       headersTimeout: 120_000,
       bodyTimeout: 120_000,
     });
-    if (res.statusCode < 200 || res.statusCode >= 300) return null;
+    if (res.statusCode < 200 || res.statusCode >= 300) {
+      // Give the body back before walking away — an unread undici body holds
+      // its buffers and socket, and the retrain calls this once per sale.
+      await res.body.dump();
+      return null;
+    }
     const json = (await res.body.json()) as { predictions?: Record<string, TrainedPred> };
     preds = json.predictions ?? {};
   } catch {
