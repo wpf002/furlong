@@ -55,6 +55,12 @@ export default defineRailway(() => {
   const worker = service('worker', {
     build: 'pnpm --filter @furlong/db exec prisma generate',
     start: 'pnpm --filter @furlong/api exec tsx src/jobs/worker.ts',
+    // ALWAYS, because this worker exits on purpose. It gains a few hundred MB a
+    // day across ingest/discovery/valuation and V8 never hands a high-water
+    // mark back, so above ~900 MB it finishes its job and exits for a fresh
+    // process (jobs/recycle.ts). Under ON_FAILURE a clean exit would simply
+    // leave the queue unattended.
+    restartPolicyType: 'ALWAYS',
     env: {
       DATABASE_URL: db.env.DATABASE_URL,
       REDIS_URL: cache.env.REDIS_URL,

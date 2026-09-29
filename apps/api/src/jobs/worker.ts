@@ -11,6 +11,7 @@ import { Worker, type Job } from 'bullmq';
 import { QUEUE_NAME, jobsConfig, type IngestSaleJobData } from './config.js';
 import { getConnection, getQueue, enqueue, closeQueue } from './queue.js';
 import { runRetrainInChild } from './retrainRunner.js';
+import { shouldRecycle, describeRecycle } from './recycle.js';
 import {
   runDiscover,
   runIngestSale,
@@ -69,13 +70,41 @@ async function main(): Promise<void> {
     concurrency: 2,
   });
 
+  /**
+   * Exit once this process is heavy, and let Railway start a fresh one.
+   *
+   * Checked between jobs, never during: `worker.close()` waits for whatever is
+   * running, so a recycle costs a container restart and no work. The service's
+   * restart policy is ALWAYS for exactly this reason — a clean exit here is a
+   * request for a new process, not a shutdown.
+   */
+  let recycling = false;
+  const recycleIfHeavy = async () => {
+    if (recycling) return;
+    const rss = process.memoryUsage().rss;
+    if (!shouldRecycle({ rssBytes: rss, uptimeMs: process.uptime() * 1000 })) return;
+    recycling = true;
+    // eslint-disable-next-line no-console
+    console.log(`[worker] recycling: ${describeRecycle(rss)}. Finishing in-flight jobs, then exiting for a fresh process.`);
+    try {
+      await worker.close();
+      await closeQueue();
+    } catch (err) {
+      // eslint-disable-next-line no-console
+      console.error('[worker] recycle shutdown was not clean', err);
+    }
+    process.exit(0);
+  };
+
   worker.on('completed', (job, result) => {
     // eslint-disable-next-line no-console
     console.log(`[worker] ✓ ${job.name}#${job.id}`, JSON.stringify(result)?.slice(0, 300));
+    void recycleIfHeavy();
   });
   worker.on('failed', (job, err) => {
     // eslint-disable-next-line no-console
     console.error(`[worker] ✗ ${job?.name}#${job?.id}: ${err.message}`);
+    void recycleIfHeavy();
   });
 
   await registerSchedules();
