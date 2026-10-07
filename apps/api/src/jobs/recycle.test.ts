@@ -5,7 +5,7 @@
  * drains the queue.
  */
 import { describe, expect, it } from 'vitest';
-import { shouldRecycle } from './recycle.js';
+import { shouldRecycle, containerMemoryBytes } from './recycle.js';
 
 const MB = 1024 * 1024;
 const MIN = 60 * 1000;
@@ -38,5 +38,40 @@ describe('shouldRecycle', () => {
   it('honours a threshold raised or lowered for one environment', () => {
     expect(shouldRecycle({ rssBytes: 600 * MB, uptimeMs: 60 * MIN, thresholdMb: 500, minUptimeMs: 0 })).toBe(true);
     expect(shouldRecycle({ rssBytes: 3000 * MB, uptimeMs: 60 * MIN, thresholdMb: 3500, minUptimeMs: 0 })).toBe(false);
+  });
+});
+
+describe('containerMemoryBytes', () => {
+  it('reads cgroup v2 first — that is the number Railway bills', () => {
+    const read = (p: string) => (p === '/sys/fs/cgroup/memory.current' ? 3_400_000_000 : null);
+    expect(containerMemoryBytes(read)).toBe(3_400_000_000);
+  });
+
+  it('falls back to cgroup v1', () => {
+    const read = (p: string) => (p === '/sys/fs/cgroup/memory/memory.usage_in_bytes' ? 2_000_000_000 : null);
+    expect(containerMemoryBytes(read)).toBe(2_000_000_000);
+  });
+
+  // Within 25 MB of this process, not exactly it: RSS moves between the call
+  // under test and the one in the assertion.
+  const nearOwnRss = (bytes: number) =>
+    Math.abs(bytes - process.memoryUsage().rss) < 25 * MB;
+
+  it('falls back to this process off-container, where nothing bills a cgroup', () => {
+    expect(nearOwnRss(containerMemoryBytes(() => null))).toBe(true);
+  });
+
+  it('ignores an unreadable or nonsense cgroup value', () => {
+    expect(nearOwnRss(containerMemoryBytes(() => 0))).toBe(true);
+    expect(nearOwnRss(containerMemoryBytes(() => -1))).toBe(true);
+    expect(nearOwnRss(containerMemoryBytes(() => Number.NaN))).toBe(true);
+  });
+
+  it('catches the bug that shipped: a quiet heap inside a heavy container', () => {
+    // 3.19 GB billed, heap well under the line. The old check read the heap and
+    // never fired for seven days.
+    const container = 3.19 * 1024 ** 3;
+    expect(shouldRecycle({ rssBytes: container, uptimeMs: 60 * 60 * 1000, ...base })).toBe(true);
+    expect(shouldRecycle({ rssBytes: 400 * MB, uptimeMs: 60 * 60 * 1000, ...base })).toBe(false);
   });
 });

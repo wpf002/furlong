@@ -11,7 +11,7 @@ import { Worker, type Job } from 'bullmq';
 import { QUEUE_NAME, jobsConfig, type IngestSaleJobData } from './config.js';
 import { getConnection, getQueue, enqueue, closeQueue } from './queue.js';
 import { runRetrainInChild } from './retrainRunner.js';
-import { shouldRecycle, describeRecycle } from './recycle.js';
+import { shouldRecycle, describeRecycle, containerMemoryBytes } from './recycle.js';
 import {
   runDiscover,
   runIngestSale,
@@ -79,9 +79,21 @@ async function main(): Promise<void> {
    * request for a new process, not a shutdown.
    */
   let recycling = false;
+  let jobsSinceReport = 0;
   const recycleIfHeavy = async () => {
     if (recycling) return;
-    const rss = process.memoryUsage().rss;
+    const rss = containerMemoryBytes();
+    // Every 20th job, say where memory stands. Without this the first version's
+    // silence read as "nothing to recycle" when it was "measuring the wrong
+    // number" — 3.19 GB billed, a sub-threshold heap, and no log either way.
+    if (++jobsSinceReport >= 20) {
+      jobsSinceReport = 0;
+      // eslint-disable-next-line no-console
+      console.log(
+        `[worker] memory: ${(rss / 1024 ** 3).toFixed(2)} GB container, ` +
+          `${(process.memoryUsage().rss / 1024 ** 3).toFixed(2)} GB heap`,
+      );
+    }
     if (!shouldRecycle({ rssBytes: rss, uptimeMs: process.uptime() * 1000 })) return;
     recycling = true;
     // eslint-disable-next-line no-console

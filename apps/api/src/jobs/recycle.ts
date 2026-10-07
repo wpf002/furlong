@@ -25,6 +25,40 @@ export const RECYCLE_RSS_MB = Number(process.env.WORKER_RECYCLE_RSS_MB ?? 900);
  *  queue is worse than the memory. */
 export const RECYCLE_MIN_UPTIME_MS = Number(process.env.WORKER_RECYCLE_MIN_UPTIME_MS ?? 10 * 60 * 1000);
 
+/**
+ * What Railway actually bills: the container's memory, not this process's RSS.
+ *
+ * The first version of this checked `process.memoryUsage().rss` and never once
+ * fired — the worker sat at 3.19 GB on the invoice for seven days while Node's
+ * own RSS stayed under the threshold. The gap is everything in the cgroup that
+ * is not this heap: page cache from reading catalogues and model files, and any
+ * child process. The meter is the cgroup, so the decision reads the cgroup.
+ *
+ * Falls back to process RSS off-container (tests, a laptop), which is the right
+ * answer there because there is no cgroup to bill.
+ */
+export function containerMemoryBytes(readFile = defaultRead): number {
+  // cgroup v2, then v1. Both report bytes. A zero, a negative or a non-finite
+  // reading is not a measurement — some runtimes expose the file and write
+  // nothing useful into it — and accepting one would mean never recycling.
+  for (const path of ['/sys/fs/cgroup/memory.current', '/sys/fs/cgroup/memory/memory.usage_in_bytes']) {
+    const value = readFile(path);
+    if (value != null && Number.isFinite(value) && value > 0) return value;
+  }
+  return process.memoryUsage().rss;
+}
+
+function defaultRead(path: string): number | null {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const { readFileSync } = require('node:fs') as typeof import('node:fs');
+    const n = Number(readFileSync(path, 'utf8').trim());
+    return Number.isFinite(n) && n > 0 ? n : null;
+  } catch {
+    return null;
+  }
+}
+
 export interface RecycleCheck {
   rssBytes: number;
   uptimeMs: number;
@@ -43,7 +77,12 @@ export function shouldRecycle({
   return rssBytes / (1024 * 1024) > thresholdMb;
 }
 
-/** For the log line, so the reason a worker went away is in the record. */
-export function describeRecycle(rssBytes: number): string {
-  return `${(rssBytes / (1024 * 1024 * 1024)).toFixed(2)} GB resident, over the ${RECYCLE_RSS_MB} MB recycle threshold`;
+/** For the log line, so the reason a worker went away is in the record, and so
+ *  the two numbers that disagreed the first time are both visible. */
+export function describeRecycle(containerBytes: number): string {
+  const gb = (b: number) => (b / (1024 * 1024 * 1024)).toFixed(2);
+  return (
+    `${gb(containerBytes)} GB in the container (heap ${gb(process.memoryUsage().rss)} GB), ` +
+    `over the ${RECYCLE_RSS_MB} MB recycle threshold`
+  );
 }
